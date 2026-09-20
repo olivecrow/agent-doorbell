@@ -1,0 +1,1 @@
+{"date":"2026-09-20","doc":"development-plan.md","change_type":"changed","summary":"Complete conversational language defaults and adjustable local speech volume.","intent":"Apply user feedback after successful cross-session speech playback.","related_files":["tests/playback-volume.test.mjs"]}

@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Generated output
+dist/
+coverage/
+*.tsbuildinfo
+
+# npm package archives
+*.tgz
+
+# Local logs
+npm-debug.log*
+*.log
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+.doorbell-dev/

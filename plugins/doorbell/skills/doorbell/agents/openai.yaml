@@ -1,0 +1,4 @@
+interface:
+  display_name: "Doorbell"
+  short_description: "Request attention with speech or an offline sound"
+  default_prompt: "Use native Codex questions and notifications first. Use $doorbell once if you can confirm that my response wait ended without an answer and this task still needs my input or action."

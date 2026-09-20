@@ -1,0 +1,20 @@
+{
+  "name": "doorbell",
+  "version": "1.0.0",
+  "description": "Local speech and sound notifications for AI agents, with per-call delivery controls.",
+  "author": {
+    "name": "Agent Doorbell contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Doorbell",
+    "shortDescription": "Hear when your agent needs your attention.",
+    "longDescription": "Use OpenAI or Gemini speech with your agent's current personality, or an offline notification sound. API keys stay in your OS credential store.",
+    "developerName": "Agent Doorbell contributors",
+    "category": "Productivity",
+    "capabilities": ["Write"],
+    "defaultPrompt": "Use Doorbell to notify me when you need my attention."
+  },
+  "mcpServers": "./.mcp.json",
+  "license": "MIT"
+}

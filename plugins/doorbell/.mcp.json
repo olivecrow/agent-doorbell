@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "doorbell": {
+      "command": "node",
+      "args": [
+        "-e",
+        "const path=require('node:path'); const root=path.join(require('node:os').homedir(),'.agent-doorbell'); process.env.DOORBELL_CONFIG_DIR=root; import(require('node:url').pathToFileURL(path.join(root,'runtime','node_modules','agent-doorbell','dist','mcp.js')).href).catch(()=>{console.error('[doorbell] Installed runtime is missing or could not start.');process.exitCode=1;});"
+      ]
+    }
+  }
+}
