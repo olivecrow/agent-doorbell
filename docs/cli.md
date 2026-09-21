@@ -7,6 +7,8 @@ src/cli.ts compiles to dist/cli.js, exposed as doorbell by package.json. All bui
 | Command                                                    | Behavior                                                                                               |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | --help, -h, no arguments                                   | Print help                                                                                             |
+| --version                                                  | Print the installed package version |
+| setup codex\|claude [--preview] [--remove]                   | Preview, register, or remove this runtime's user-level MCP connection; preserve other entries and verify startup/readback |
 | configure, configure --help                                | Print configuration command usage                                                                      |
 | configure api-key [--provider openai\|gemini]              | Interactively set or remove that provider's OS-stored key, or cancel; defaults to OpenAI               |
 | configure speech                                           | Interactively edit provider, activation, playback mode, default voice, and speech volume               |

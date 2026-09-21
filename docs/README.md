@@ -5,6 +5,7 @@ Feature documents describe the current implementation. The [development plan](de
 | Document                                      | Contents                                                                                                 |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | [Product](product.md)                         | Ownership boundaries, default behavior, scope                                                            |
+| [Installation](installation.md)              | Agent-operated installation, direct Codex/Claude MCP setup, speech activation, updates and removal |
 | [CLI](cli.md)                                 | Commands, options, output, and exit codes                                                                |
 | [Agent integration](agent-integration.md)     | Instructions for calling AI agents, including per-call controls and official TTS manuals                 |
 | [Speech settings](speech-settings.md)         | Provider profiles, default voices and legacy tone removal, validation, migration, paths, and persistence |

@@ -1,0 +1,24 @@
+{
+  "win32-x64": {
+    "version": "8.1.1",
+    "url": "https://github.com/GyanD/codexffmpeg/releases/download/8.1.1/ffmpeg-8.1.1-essentials_build.zip",
+    "sha256": "6f58ce889f59c311410f7d2b18895b33c03456463486f3b1ebc93d97a0f54541",
+    "archiveBytes": 109282242,
+    "directory": "win32-x64-8.1.1",
+    "executable": "ffplay.exe",
+    "files": {
+      "ffplay.exe": {
+        "entry": "ffmpeg-8.1.1-essentials_build/bin/ffplay.exe",
+        "sha256": "ba3697eebac866a3dbcef41e97053ab7689ebcb4b0531f9909e46e5abe3b3e70"
+      },
+      "LICENSE": {
+        "entry": "ffmpeg-8.1.1-essentials_build/LICENSE",
+        "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+      },
+      "README.txt": {
+        "entry": "ffmpeg-8.1.1-essentials_build/README.txt",
+        "sha256": "af90ccd9d705c74cadb9c36918664353de0533eade19f7ccd5cbe6081c262001"
+      }
+    }
+  }
+}

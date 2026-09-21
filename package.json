@@ -1,11 +1,13 @@
 {
   "name": "agent-doorbell",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A local CLI for AI agents to request human attention with speech and an offline notification sound fallback.",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
+    "postinstall": "node player/install.mjs",
+    "setup:player": "node player/install.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run clean && tsc -p tsconfig.json",
     "test": "npm run build && node --test tests/*.test.mjs",
@@ -19,9 +21,12 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "devDependencies": {
-    "@modelcontextprotocol/client": "2.0.0",
     "@types/node": "^24.13.3",
     "@types/proper-lockfile": "4.1.4",
     "@types/write-file-atomic": "4.0.3",
@@ -30,10 +35,13 @@
   "dependencies": {
     "@google/genai": "2.23.0",
     "@inquirer/prompts": "8.7.2",
+    "@modelcontextprotocol/client": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
     "execa": "10.0.1",
+    "fflate": "0.8.3",
     "openai": "^7.15.0",
     "proper-lockfile": "4.1.2",
+    "smol-toml": "1.8.0",
     "wavefile": "11.0.0",
     "write-file-atomic": "8.0.0",
     "zod": "4.6.5"
@@ -45,6 +53,9 @@
     "node": ">=24"
   },
   "files": [
+    "player/install.mjs",
+    "player/manifest.json",
+    "player/README.md",
     "dist/**/*.js",
     "dist/**/*.d.ts",
     "assets/notification.mp3",

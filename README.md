@@ -6,18 +6,24 @@ See the [development plan](docs/development-plan.md) for deferred platform verif
 
 ## Installation
 
-Download `agent-doorbell-1.0.0.tgz` from the [GitHub v1.0.0 release](https://github.com/olivecrow/agent-doorbell/releases/tag/v1.0.0), then install the downloaded archive:
+Install Node.js 24 or newer, then install Doorbell and connect the AI host you use:
 
 ```sh
-npm install --global /absolute/path/agent-doorbell-1.0.0.tgz
+npm install --global agent-doorbell@1.1.0
 doorbell doctor
+doorbell setup codex
+# Or: doorbell setup claude
 ```
 
-Node.js 24 or newer and ffplay are required. Windows has native verification; macOS/Linux validation remains pending. This release is distributed through GitHub; it is not published to the npm registry. See the [Codex plugin guide](docs/codex-plugin.md) for plugin installation.
+Windows x64 installs ffplay 8.1.1 automatically; no separate player installation or PATH edits are needed. The first installation downloads about 109 MB from the pinned upstream release and verifies its checksum. macOS/Linux and other architectures require ffplay separately and remain unverified. A local audio device is required; installing on a remote server does not play sound on your desktop.
+
+`setup` registers the installed runtime with the selected host's user configuration, preserves other servers, refuses conflicting registrations or an enabled Doorbell plugin, and verifies MCP startup/tool discovery. The host CLI must already be installed. Use `--preview` to inspect without changes or `--remove` to remove this installation's registration. Restart/reconnect the host, then ask its agent to read `get_instructions` and send an audible test. Speech is disabled by default; the offline sound needs no API key.
+
+For an AI agent managing installation, upgrades, or a user-local runtime, see the [agent installation guide](docs/installation.md). A custom marketplace is not required. The optional [Codex plugin](docs/codex-plugin.md) adds the calling skill; choose one connection method per host. Versioned tarballs and checksums are also available from [GitHub releases](https://github.com/olivecrow/agent-doorbell/releases).
 
 ## Development
 
-Requires Node.js 24 and ffplay in an absolute PATH directory for local audio playback. Doorbell excludes the current working directory from player discovery and pins the resolved executable for diagnosis and playback.
+Requires Node.js 24. On Windows x64, `npm install` automatically downloads and verifies the package-managed ffplay dependency (about 109 MB downloaded and 103 MB installed), with no PATH changes or administrator installation. If lifecycle scripts were disabled, run `npm run setup:player`. Other platforms require ffplay in an absolute PATH directory. Doorbell prefers its managed executable, then checks explicit PATH entries outside the current working directory. See the [managed player](player/README.md) for download, failure, and license details.
 
 Buffered speech uses private storage under `~/.agent-doorbell/speech-tmp`. On Windows, the built-in Windows PowerShell and .NET ACL APIs verify directory access before synthesis. If storage permissions cannot be verified, Doorbell uses the offline sound without a paid speech request. See [temporary audio security](docs/speech-provider.md#temporary-audio).
 

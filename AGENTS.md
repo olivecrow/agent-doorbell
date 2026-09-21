@@ -47,7 +47,8 @@
 - The bundled fallback is assets/notification.mp3, supplied by the user as their original recording of the C and E piano notes. Do not replace it with the old purchased recording or change/copy assets without authorization.
 - The user licensed the original audio recording under MIT on 2026-09-20. Keep assets/LICENSE.md separate from the code license and include both in packages. Public npm release still requires an explicit request.
 - File playback accepts paths and supports WAV and MP3. The current player uses ffplay through ProcessRunner; it does not implement decoding or device output.
-- Resolve ffplay to an absolute executable from absolute PATH entries, excluding the current working directory and aliases to it. Reuse that path for diagnosis, buffered playback, and streaming; never spawn a bare player name.
+- Install the pinned Windows x64 ffplay dependency through player/install.mjs at npm installation time. Keep archive/file hashes, the original binary license and source/build notice, bounded downloads, and no automatic retries. Never download during notifications or diagnosis. Other platforms remain PATH-based and unverified.
+- Resolve the package-managed ffplay first, rejecting links and non-regular files. If it is absent, resolve from absolute PATH entries, excluding the current working directory and aliases to it. Reuse that absolute path for diagnosis, buffered playback, and streaming; never spawn a bare player name.
 - configure speech --volume controls local speech gain (0.25-4, default 1). Persist playbackVolume independently of provider profiles. Apply gain with peak limiting to buffered/streaming speech only; do not change the packaged sound, system volume, or provider request body.
 - Pass paths, messages, and hook data through argument arrays or environment variables, never interpolated shell commands.
 - Buffered speech receives a complete response, plays WAV through a temporary file, and deletes it in finally. OpenAI returns WAV; Gemini returns 24 kHz, 16-bit signed little-endian mono PCM, wrapped as WAV by wavefile. Keep stale-file cleanup separate.
@@ -62,6 +63,7 @@
 - CLI, hooks, and MCP must use runtime.ts and the same per-user delivery queue. Never start a paid request before queue admission.
 - Keep the shared queue under ~/.agent-doorbell/queue, independent of speech configuration scopes. Reject linked queue directories, unsafe POSIX ownership/permissions, and non-regular state files before delivery. Never repair or import untrusted legacy temporary queue state.
 - Keep MCP stdout protocol-only. MCP tools may read configuration and credential statuses, but cannot write settings or keys. The plugin runtime uses normal user settings independently of this repository.
+- Host setup is CLI-only: use native host CLIs for user-level MCP writes, preserve unrelated configuration, reject conflicting entries and enabled Doorbell plugins, and verify package startup plus saved registration. Preview must not write or launch processes. Removal only touches a matching registration; never change speech settings or credentials during setup.
 - Keep unsupported streaming fallback before synthesis. Do not enable Gemini streaming until continuous playback has new provider and listening evidence.
 
 <!-- project-docs-bootstrap:start -->

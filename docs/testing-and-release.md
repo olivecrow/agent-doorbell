@@ -2,7 +2,7 @@
 
 ## Automated Regression
 
-`npm test` clean-builds TypeScript and runs Node's test runner. The temporary-audio security batch on Windows / Node 24.15.0 completed 86 tests: 84 passed, with two native POSIX permission tests skipped on Windows. API calls and audio in the ordinary suite are fake boundaries; CLI, queue, MCP, and process tests launch real isolated subprocesses. Production dependency audit reported zero known vulnerabilities.
+`npm test` clean-builds TypeScript and runs Node's test runner. The 1.1.0 Windows / Node 24.15.0 batch completed 94 tests: 92 passed, with two native POSIX permission tests skipped on Windows. API calls and audio in the ordinary suite are fake boundaries; CLI, queue, MCP, and process tests launch real isolated subprocesses. Production dependency audit reported zero known vulnerabilities.
 
 Coverage includes settings defaults and migration, independent provider profiles and credentials, hidden-input prompt logic, no persistent personality, per-call controls and wrong-provider rejection before side effects, safe errors, no paid retry, buffered cleanup, cancellation, exact Gemini PCM/WAV bytes, English CLI guidance, both native hook routes, FIFO contention and recovery, stale-file ownership, process failure/timeout, PCM order/backpressure/early consumption, SDK streaming frames, and MCP discovery/cancellation/shutdown.
 
@@ -39,11 +39,21 @@ Existing terminal checks cover hidden key input, immediate save after submission
 
 ## Package and Local Plugin Checks
 
+`node scripts/verify-host-setup.mjs <installed-package-root>` exercises the real Codex and Claude CLIs with isolated host settings. It verifies preview, initial registration, unchanged repeated setup, native host discovery/connection, preserved unrelated settings, matching-entry removal, and repeated removal. Windows verification used Codex CLI 0.150.1 (app-server discovered all four tools) and Claude Code 2.1.81 (connected). It makes no model request and does not alter the normal user host setup. Ordinary tests separately cover plugin/registration conflicts and cancellation.
+
+Use `node scripts/verify-package.mjs <tarball> --hosts --upgrade` for release acceptance: upgrade the public v1.0.0 package to the candidate while preserving saved speech preferences, validate the installed runtime and real host setup, then uninstall and verify settings remain. Omit --upgrade for fresh installation. Host setup's startup check and readback are distinct from a human listening result.
+
+The 1.1.0 133-file package passed the v1.0.0 upgrade path on 2026-09-21: saved volume 1.25 survived installation, both real host adapters passed, the managed player handled MP3/WAV/PCM without PATH, and uninstall preserved the updated user settings. Codex reported MCP server version 1.1.0 and all four tools. This is isolated installation/process evidence, not a new provider or listening trial.
+
 Use `npm pack` to exercise the clean prepack build. The files allowlist includes compiled runtime/declarations, documentation, plugin files, the MP3, and both license notices. It excludes source tests, development settings, temporary recordings, caches, and source maps. Inspect contents, then install the tarball in an unrelated directory with spaces and Unicode.
 
-Validate the installed CLI and MCP server without developer imports. Node and ffplay are external prerequisites. The plugin must use normal user settings and an installed runtime rather than a path into the source checkout. Preserve existing normal preferences and credentials; use the installed CLI's separate configuration commands for new settings or keys.
+Validate the installed CLI and MCP server without developer imports. Node is an external prerequisite; new Windows x64 packages prepare a pinned ffplay through postinstall. Other platforms still require an external player. The package includes player/install.mjs, player/manifest.json and the third-party notice, but excludes downloaded player/bin files. Installation checks must allow lifecycle scripts so they exercise the automatic player setup. The plugin must use normal user settings and an installed runtime rather than a path into the source checkout. Preserve existing normal preferences and credentials; use the installed CLI's separate configuration commands for new settings or keys.
 
-Run `node scripts/verify-package.mjs /absolute/path/agent-doorbell-1.0.0.tgz` to check a tarball in an isolated installation. It verifies an unrelated working directory containing spaces and Korean characters, CLI instructions and all 30 Gemini voices, discovery of all four MCP tools, conversational-language guidance, CLI-to-MCP volume persistence, and exclusion of development files and credential-like content.
+Run `node scripts/verify-package.mjs /absolute/path/agent-doorbell-1.1.0.tgz` to check a tarball in an isolated installation. It verifies an unrelated working directory containing spaces and Korean characters, CLI instructions and all 30 Gemini voices, discovery of all four MCP tools, conversational-language guidance, CLI-to-MCP volume persistence, and exclusion of development files and credential-like content.
+
+On Windows x64, package verification also clears PATH, resolves the package-managed ffplay, checks version and PCM capability, and exercises MP3, buffered WAV, and PCM playback with local gain through SDL's dummy audio driver. This is real binary/process evidence without physical sound output or paid synthesis; it does not establish a new listening result. Installer regression tests cover checksum/size failures, allowlisted extraction, license retention, idempotence, modified files, links, cancellation, HTTP failure without retry, unsupported targets, and managed resolution without PATH.
+
+The 2026-09-21 Windows run passed the full 90-test regression batch (88 passed, two POSIX-only skips), then all five installer/resolver tests including the additional package-owned-path case. The 129-file tarball passed clean installation with automatic ffplay download, no-PATH dummy-driver MP3/WAV/PCM playback, and all four MCP tools outside the source checkout. npm dependency audit reported zero known vulnerabilities. These checks did not publish a release or update the normal user runtime.
 
 On 2026-09-20, the 115-file volume/language tarball passed these installation checks. The local runtime under `~/.agent-doorbell/runtime` and the enabled `doorbell@personal` plugin were verified independently of the source checkout. The installed doctor reported sound and speech ready with both provider keys configured.
 
@@ -53,7 +63,7 @@ Acceptance transcripts, temporary tarballs, and one-off verification scripts are
 
 ## Scope and Release
 
-Windows-only completion does not imply macOS/Linux support. The actual Claude host remains untested; both hook adapters are covered through their native input contracts and real CLI subprocesses. Gemini continuous streaming requires new provider-throughput and human listening evidence before it can be enabled.
+Windows-only completion does not imply macOS/Linux support. The actual Claude Code MCP connection is verified separately from hooks; lifecycle hook invocation remains untested in the actual Claude host. Both hook adapters have automated input-contract and CLI coverage. Gemini continuous streaming requires new provider-throughput and human listening evidence before it can be enabled.
 
 The code is MIT. The original C/E piano recording is separately MIT with the owner's explicit authorization; see [recording license](../assets/LICENSE.md). No purchased recording is included. Public npm publication and Git release operations require a separate user request.
 

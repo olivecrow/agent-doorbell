@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { chmod, copyFile, lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
-import { resolveFfplayExecutable } from "../dist/audio/ffplay-executable.js";
+import { resolvePathFfplayExecutable as resolveFfplayExecutable } from "../dist/audio/ffplay-executable.js";
 import { FfplayAudioPlayer } from "../dist/audio/ffplay-player.js";
 import { runPcmProcess } from "../dist/audio/pcm-player.js";
 import { NodeProcessRunner } from "../dist/process/node-runner.js";

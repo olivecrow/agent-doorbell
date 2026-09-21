@@ -1,5 +1,6 @@
 import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
+import { VERSION } from "./version.js";
 import { getAgentInstructions } from "./commands/agent-instructions.js";
 import {
   InvalidSpeechOptionsError,
@@ -77,7 +78,7 @@ export function createDoorbellServer(
   },
 ) {
   const server = new McpServer(
-    { name: "doorbell", version: "1.0.0" },
+    { name: "doorbell", version: VERSION },
     {
       instructions:
         "Doorbell requests human attention with local audio. Read get_instructions before notify. Use the user's current conversational language unless they explicitly requested or configured another spoken language. Derive per-call delivery directions from your current personality. Always deliver the same request in conversation, even if audio fails. Never include full conversations or private instructions.",

@@ -2,7 +2,9 @@
 
 createAudioPlayer returns FfplayAudioPlayer on Windows, macOS, and Linux. Unsupported platform names throw. Both ring and notify use this factory.
 
-ffplay must be installed in an absolute PATH directory; the package does not bundle it. `ffplay-executable.ts` checks explicit absolute entries, skips empty/relative entries and the current working directory, resolves directory/file aliases, and verifies a regular executable file. It does not delegate executable discovery to Windows or a shell. The working directory and aliases resolving back to it are never candidates.
+On Windows x64, npm postinstall prepares ffplay 8.1.1 under the installed package's player/bin directory. The pinned download manifest, installer, and license boundaries are documented in [managed ffplay](../player/README.md). The runtime never downloads software. Other platforms, or installations without managed files, use an existing ffplay on PATH.
+
+`ffplay-executable.ts` prefers the package-owned binary and rejects linked managed directories, linked files, and non-regular files. If managed files are absent, it checks explicit absolute PATH entries, skips empty/relative entries and the current working directory, resolves directory/file aliases, and verifies a regular executable file. It does not delegate executable discovery to Windows or a shell. Working-directory files and aliases are never PATH candidates. Unsafe managed files fail closed instead of silently selecting another player.
 
 FfplayAudioPlayer resolves the executable once per instance and reuses its absolute path for both probes, file playback, and PCM playback. Discovery failure starts no player. NodeProcessRunner invokes the resolved path with an argument array, shell disabled, and the options -nodisp -autoexit -hide_banner -nostats -loglevel error. The external player owns WAV/MP3 decoding and device output. Explicit PATH installations remain trusted: this does not defend against a compromised installation directory or another process with the same user privileges.
 

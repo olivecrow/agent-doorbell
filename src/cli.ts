@@ -40,6 +40,8 @@ import { getAgentInstructions } from "./commands/agent-instructions.js";
 
 import { isSpeechPlaybackMode } from "./config/speech.js";
 import { isPlaybackVolume } from "./audio/playback-volume.js";
+import { setupHost, type SetupHost } from "./commands/setup-host.js";
+import { VERSION } from "./version.js";
 
 type CliCommand =
   | {
@@ -48,7 +50,9 @@ type CliCommand =
       message: string | undefined;
     }
   | { kind: "doctor"; json: boolean; playSound: boolean }
+  | { kind: "setup"; host: SetupHost; preview: boolean; remove: boolean }
   | { kind: "help" }
+  | { kind: "version" }
   | { kind: "unknown"; value: string }
   | { kind: "invalid"; message: string }
   | { kind: "notify"; request: AttentionRequest }
@@ -98,8 +102,20 @@ async function main(args: readonly string[]): Promise<void> {
 function parseCommand(args: readonly string[]): CliCommand {
   const [first, ...rest] = args;
 
+  if (first === "--version" && rest.length === 0) return { kind: "version" };
+
   if (first === undefined || first === "--help" || first === "-h") {
     return { kind: "help" };
+  }
+
+  if (first === "setup") {
+    const [host, ...options] = rest;
+    if (host === "--help" || host === "-h") return { kind: "help" };
+    try {
+      if (host !== "codex" && host !== "claude") throw new Error();
+      const { values } = parseArgs({ args: options, options: { preview: { type: "boolean" }, remove: { type: "boolean" } }, strict: true, allowPositionals: false });
+      return { kind: "setup", host, preview: values.preview ?? false, remove: values.remove ?? false };
+    } catch { return { kind: "invalid", message: "Use setup codex|claude [--preview] [--remove]." }; }
   }
 
   if (first === "configure") {
@@ -357,7 +373,9 @@ function printHelp(): void {
   doorbell configure speech --list-voices [--provider openai|gemini]
   doorbell agent-instructions
   doorbell doctor [--json] [--play-sound]
+  doorbell setup codex|claude [--preview] [--remove]
   doorbell --help
+  doorbell --version
 
 API keys are entered interactively and stored separately by provider in the OS credential store.
 configure api-key defaults to OpenAI; use --provider gemini for a Gemini API key.
@@ -378,6 +396,12 @@ async function runCommand(
   signal.throwIfAborted();
 
   switch (command.kind) {
+    case "version":
+      console.log(VERSION);
+      return 0;
+    case "setup":
+      console.log(JSON.stringify(await setupHost(command.host, command, signal), null, 2));
+      return 0;
     case "help":
       printHelp();
       return 0;
