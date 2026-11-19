@@ -75,7 +75,8 @@ export async function verifyHosts(installed) {
         hostEvidence = await codexTools(hostCli, env, root);
         const config = parse(await readFile(codexConfig, "utf8"));
         assert.equal(config.model, "fixture-preserve");
-        assert.deepEqual(config.mcp_servers.unrelated, { ...other, enabled: false });
+        // TOML tables can have a null prototype. Compare all registration fields.
+        assert.deepEqual({ ...config.mcp_servers.unrelated }, { ...other, enabled: false });
       } else {
         assert.match(result.stdout, /Connected/);
         const config = JSON.parse(await readFile(claudeConfig, "utf8"));

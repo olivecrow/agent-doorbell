@@ -11,7 +11,7 @@ In Codex, the agent asks in the conversation first. If required input is still o
 Install Node.js 24 or newer, then install Doorbell and connect the AI host you use:
 
 ```sh
-npm install --global agent-doorbell@1.1.0
+npm install --global agent-doorbell@1.1.1
 doorbell doctor
 doorbell setup codex
 # Or: doorbell setup claude
