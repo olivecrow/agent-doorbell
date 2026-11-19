@@ -81,7 +81,7 @@ export function createDoorbellServer(
     { name: "doorbell", version: VERSION },
     {
       instructions:
-        "Doorbell requests human attention with local audio. Read get_instructions before notify. Use the user's current conversational language unless they explicitly requested or configured another spoken language. Derive per-call delivery directions from your current personality. Always deliver the same request in conversation, even if audio fails. Never include full conversations or private instructions.",
+        "Doorbell requests human attention with local audio. For required input, send the native question first. After 3 minutes without a reply, proactively notify once with one short, actionable sentence if the request is still pending. Record the attempt before calling, even if audio fails. Explicit audio requests can be fulfilled directly. Read get_instructions before notify. Use the user's current conversational language unless they explicitly requested or configured another spoken language. Derive per-call delivery directions from your current personality. Always deliver the same request in conversation, even if audio fails. Never include full conversations or private instructions.",
     },
   );
   server.registerTool(
@@ -101,7 +101,7 @@ export function createDoorbellServer(
     "notify",
     {
       description:
-        "Speak a short final notification sentence in the user's conversational language unless they explicitly requested or configured another spoken language, falling back to the bundled sound if speech fails. Read get_instructions first. Send current personality as brief speech.instructions (OpenAI) or speech.prompt (Gemini), never a full system prompt. One paid request at most. Always keep your text request visible in the conversation.",
+        "Speak a short final notification sentence in the user's conversational language unless they explicitly requested or configured another spoken language. For a required unanswered native request, notify once after 3 minutes with one short, actionable sentence. Recheck for a reply or completed action first. Explicit audio requests may be delivered directly. Read get_instructions first. Use brief per-call delivery directions. One paid request at most. Keep the text request visible.",
       inputSchema: z.strictObject({
         message: z
           .string()

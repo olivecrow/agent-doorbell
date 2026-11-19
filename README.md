@@ -4,6 +4,8 @@ A local CLI that lets AI agents request human attention with a short spoken mess
 
 See the [development plan](docs/development-plan.md) for deferred platform verification and release gates.
 
+In Codex, the agent asks in the conversation first. If required input is still outstanding after 3 minutes, it sends one short, actionable audio reminder. The agent checks for a reply immediately before calling. [Agent calling instructions](docs/agent-integration.md#when-to-call-in-codex)
+
 ## Installation
 
 Install Node.js 24 or newer, then install Doorbell and connect the AI host you use:

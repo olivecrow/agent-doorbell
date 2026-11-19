@@ -13,7 +13,7 @@
     "developerName": "Agent Doorbell contributors",
     "category": "Productivity",
     "capabilities": ["Write"],
-    "defaultPrompt": "Use Doorbell to notify me when you need my attention."
+    "defaultPrompt": "Ask in Codex first. After 3 minutes without a reply, use Doorbell once with one short, actionable sentence if my input is still needed."
   },
   "mcpServers": "./.mcp.json",
   "license": "MIT"

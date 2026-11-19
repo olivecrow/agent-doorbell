@@ -11,7 +11,7 @@ The `plugins/doorbell` bundle contains a Codex manifest, the Doorbell calling sk
 
 Schemas reject unknown fields, secrets, and settings overrides. Delivery controls remain transient. Cancellation from an MCP request reaches queue waiting, synthesis, and the local player. Tool results distinguish speech from fallback sound, retain failed attempts, and remind the caller to keep its text request visible.
 
-The calling skill and `get_instructions` follow the [Codex attention policy](agent-integration.md#when-to-call-in-codex): use native questions/notifications first, then make at most one audio call for a still-needed request after a confirmed unanswered response wait. Explicit audio requests remain supported. This is guidance for the active agent; the plugin does not install timeout detection, background monitoring, or automatic wakeups. `get_instructions` reads the runtime package's `docs/agent-integration.md`, so source edits require a runtime/plugin update before they reach an installed copy.
+The calling skill and `get_instructions` follow the [Codex attention policy](agent-integration.md#when-to-call-in-codex). Send the native request first. After 3 minutes without a reply, proactively notify once with one short, actionable sentence if input is still required. Explicit audio requests may be fulfilled directly. The active agent tracks elapsed time and prior attempts. Installed copies receive updated guidance through both the plugin bundle and the runtime package.
 
 ## Local Installation
 

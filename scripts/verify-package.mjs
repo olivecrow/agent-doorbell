@@ -144,6 +144,12 @@ try {
     arguments: {},
   });
   const instructions = JSON.parse(result.content[0].text);
+  const skill = await readFile(join(installed, "plugins/doorbell/skills/doorbell/SKILL.md"), "utf8");
+  for (const guidance of [guide.stdout, instructions.instructions, skill]) {
+    assert.match(guidance, /3 minutes \(180 seconds\)/);
+    assert.match(guidance, /at most one Doorbell call for the same request/i);
+    assert.match(guidance, /one short, actionable sentence/i);
+  }
   assert.equal(instructions.configuration.enabled, false);
   assert.equal(instructions.configuration.playbackVolume, previousSettings === undefined ? 1 : 1.25);
   assert.equal(instructions.cli.args[0], cli);

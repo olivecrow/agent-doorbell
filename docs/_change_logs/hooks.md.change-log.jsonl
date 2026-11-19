@@ -1,1 +1,2 @@
 {"date":"2026-09-20","doc":"hooks.md","change_type":"added","summary":"Implement bounded Codex argument and Claude stdin notification adapters.","intent":"Reuse the same validation, queue, cancellation, and fallback contract for native hooks.","related_files":["src/commands/hook.ts"]}
+{"date":"2026-11-19","doc":"hooks.md","change_type":"changed","summary":"Clarify that the active agent owns the three-minute reminder.","intent":"Preserve the native completion hook contract.","related_files":[]}

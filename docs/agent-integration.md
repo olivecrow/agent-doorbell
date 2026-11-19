@@ -4,15 +4,13 @@ This document is for the agent invoking Doorbell. Read the current configuration
 
 ## When to Call in Codex
 
-Use Codex's native question or notification first for agent-initiated attention requests, and keep the actionable question in the conversation. Escalate to Doorbell only while the agent is active and can confirm that the relevant response wait timed out or that a tool which actually waited for the user's response returned without an answer. The user's answer or action must still be needed; do not escalate optional questions that can be resolved with a reasonable assumption. Explicit requests for audio now or an audible completion notice may be fulfilled directly.
+Send the native Codex question or notification first. Leave the actionable question in the conversation and note when it was sent. If the user's answer or action is still required after **3 minutes (180 seconds)** without a reply, proactively call Doorbell once. Speak one short, actionable sentence in the user's language, for example, “Please approve the release in npm.” Keep details in the text request.
 
-Consult the current question/wait tool's contract and returned outcome. Do not assume all questions or notifications share a timeout or invent a duration. An asynchronous question tool that returns immediately has not finished waiting for a response. Push/toast display expiry, unrelated tool timeouts, and missing read receipts do not establish a response timeout. If the host exposes no applicable wait outcome, retain the text request without promising delayed audio.
+Count from the original request, including time spent on independent work. When blocked, use the host's active-turn wait for user input and check the conversation when it returns. A shorter wait or immediate async dispatch does not finish the three-minute interval. Use the original send time and a clock or a measured wait. A disappearing toast and a tool timeout for unrelated work give no evidence of a reply.
 
-The [official Codex App Server contract](https://learn.chatgpt.com/docs/app-server#toolrequestuserinput) allows a request-specific `autoResolutionMs` value or `null`. Its `serverRequest/resolved` notification can also mean cleanup when a turn starts, completes, or is interrupted; that event alone does not establish an unanswered timeout. These host details do not imply that every agent-facing tool exposes them.
+Immediately before delivery, check for an answer, cancellation, completed action, or an obsolete request. Skip the reminder if any applies or if a reasonable assumption can resolve the question. Record the attempt before calling. Make at most one Doorbell call for the same request across turns and rewordings, including if audio fails. A pending approval still requires affirmative authorization.
 
-Immediately before calling, check the conversation for a reply, cancellation, or a request that is no longer needed. Skip audio in those cases. Make at most one Doorbell call for the same unanswered request, even if audio fails; track the attempt in conversation context. A timeout is never user approval. Required input or authorization remains pending, and the text question remains visible. Write a short actionable notification in the user's current conversational language, subject to an explicit spoken-language override.
-
-This policy adds no timer, hook, background monitor, automation, or execution connection. Doorbell cannot automatically wake the agent after the turn ends or determine whether a notification was read. The delivery queue does not enforce this policy or deduplicate requests; the calling agent owns the decision.
+When the host cannot keep the turn active, recheck the pending request at the next active opportunity. Keep the text visible. This policy uses no background timers, hooks, or automatic wakeups. Explicit requests for immediate audio or an audible completion notice may be fulfilled directly.
 
 ## Calling Workflow
 
