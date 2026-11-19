@@ -94,6 +94,8 @@ Exit 0 means audio delivery succeeded, possibly only the fallback sound; it does
 
 ## MCP and Hooks
 
+When the selected provider has no saved key, one successful sound delivery plays two piano chimes followed by a fixed recorded clip. Keep the current request in the conversation. Report the recorded sound when asked what played.
+
 The Codex plugin exposes the same contract as structured tools. Read `get_instructions`, then call `notify` with `{ message, source?, speech?: { voice?, instructions?, speed?, prompt? } }`. MCP directions have the same limits and provider rules as the CLI. Use `ring` for an offline sound and `doctor` for silent diagnosis. The instruction result includes the exact installed Node/CLI invocation for user-requested configuration work.
 
 All entrypoints share a user-wide FIFO queue. Calls wait up to 120 seconds; cancellation removes a waiting request before it incurs a synthesis charge. Repeated source names are not suppressed. Neither source identifiers nor messages are written to queue storage.

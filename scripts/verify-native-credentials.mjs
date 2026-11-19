@@ -9,8 +9,12 @@ const openai = new KeyringCredentialStore(service);
 const gemini = new KeyringCredentialStore(service, "gemini");
 try {
   assert.equal((await openai.read()).value, undefined);
+  assert.equal(await openai.status(), "missing");
   assert.equal((await openai.write("fake-test-openai")).ok, true);
+  assert.equal(await openai.status(), "configured");
+  assert.equal(await gemini.status(), "missing");
   assert.equal((await gemini.write("fake-test-gemini")).ok, true);
+  assert.equal(await gemini.status(), "configured");
   assert.equal(
     (await new KeyringCredentialStore(service, "openai").read()).value,
     "fake-test-openai",
@@ -24,6 +28,8 @@ try {
   assert.equal((await gemini.remove()).ok, true);
   assert.equal((await openai.read()).value, undefined);
   assert.equal((await gemini.read()).value, undefined);
+  assert.equal(await openai.status(), "missing");
+  assert.equal(await gemini.status(), "missing");
 }
 console.log(
   "Native provider credential isolation, replacement, and cleanup passed.",

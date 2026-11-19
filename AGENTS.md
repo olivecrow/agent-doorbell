@@ -45,6 +45,7 @@
 ## Audio and Remaining Work
 
 - The bundled fallback is assets/notification.mp3, supplied by the user as their original recording of the C and E piano notes. Do not replace it with the old purchased recording or change/copy assets without authorization.
+- A confirmed missing key for the selected provider uses assets/notification-no-key.mp3, including when speech is disabled. This offline file contains the original chime twice followed by the supplied Google AI Studio clip. Keep ring, credential-store errors, and synthesis failures on the single original chime.
 - The user licensed the original audio recording under MIT on 2026-09-20. Keep assets/LICENSE.md separate from the code license and include both in packages. Public npm release still requires an explicit request.
 - File playback accepts paths and supports WAV and MP3. The current player uses ffplay through ProcessRunner; it does not implement decoding or device output.
 - Install the pinned Windows x64 ffplay dependency through player/install.mjs at npm installation time. Keep archive/file hashes, the original binary license and source/build notice, bounded downloads, and no automatic retries. Never download during notifications or diagnosis. Other platforms remain PATH-based and unverified.

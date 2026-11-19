@@ -1,12 +1,20 @@
 // Used only by CLI subprocess tests. All external boundaries are replaced.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { KeyringCredentialStore } from "../../dist/config/keyring-credential-store.js";
 import { FfplayAudioPlayer } from "../../dist/audio/ffplay-player.js";
 
 const trace = { credentials: [], requests: [], bodies: [], played: [] };
+KeyringCredentialStore.prototype.status = async function () {
+  trace.credentials.push(this.provider);
+  if (process.env.DOORBELL_TEST_MODE === "unavailable") return "unavailable";
+  return process.env.DOORBELL_TEST_MODE === "missing" ? "missing" : "configured";
+};
 KeyringCredentialStore.prototype.read = async function () {
   trace.credentials.push(this.provider);
+  if (process.env.DOORBELL_TEST_MODE === "unavailable")
+    return { ok: false, reason: "Could not access the credential store." };
   return {
     ok: true,
     value:
@@ -17,7 +25,7 @@ KeyringCredentialStore.prototype.read = async function () {
 };
 FfplayAudioPlayer.prototype.check = async () => ({ available: true });
 FfplayAudioPlayer.prototype.play = async (request) => {
-  trace.played.push(request.format);
+  trace.played.push(basename(request.path));
   assert.ok((await readFile(request.path)).length > 0);
   return { ok: true };
 };

@@ -1,5 +1,5 @@
 import type { AsyncEntry } from "@napi-rs/keyring";
-import type { CredentialResult, CredentialStore } from "./credentials.js";
+import type { CredentialResult, CredentialStatus, CredentialStore } from "./credentials.js";
 import {
   DEFAULT_SPEECH_PROVIDER,
   type SpeechProviderId,
@@ -18,6 +18,19 @@ export class KeyringCredentialStore implements CredentialStore {
       async (entry) => (await entry.getPassword(signal)) ?? undefined,
       signal,
     );
+  }
+
+  async status(signal?: AbortSignal): Promise<CredentialStatus> {
+    const present = await this.run(async (entry) => {
+      const bytes = await entry.getSecret(signal);
+      try {
+        return Boolean(bytes?.length);
+      } finally {
+        bytes?.fill(0);
+      }
+    }, signal);
+    if (!present.ok || signal?.aborted) return "unavailable";
+    return present.value ? "configured" : "missing";
   }
 
   async write(

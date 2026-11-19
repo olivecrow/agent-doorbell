@@ -1,5 +1,7 @@
 # Audio Player
 
+For a confirmed missing provider key, `notify` plays `assets/notification-no-key.mp3` as one queued file. The original piano recording plays twice in full and the supplied Google AI Studio clip follows. The complete sequence takes about 12.7 seconds. It uses normal sound playback gain and cancellation. Direct `ring` and other fallback conditions play `assets/notification.mp3`.
+
 createAudioPlayer returns FfplayAudioPlayer on Windows, macOS, and Linux. Unsupported platform names throw. Both ring and notify use this factory.
 
 On Windows x64, npm postinstall prepares ffplay 8.1.1 under the installed package's player/bin directory. The pinned download manifest, installer, and license boundaries are documented in [managed ffplay](../player/README.md). The runtime never downloads software. Other platforms, or installations without managed files, use an existing ffplay on PATH.

@@ -10,10 +10,8 @@ import type {
 } from "../provider.js";
 import { normalizeSpeechOptions, type SpeechOptions } from "../options.js";
 import { streamingAudio } from "../pcm-stream.js";
-import type {
-  CredentialReader,
-  CredentialResult,
-} from "../../config/credentials.js";
+import type { CredentialReader } from "../../config/credentials.js";
+import { readApiKey } from "../read-api-key.js";
 
 export class OpenAiSpeechProvider implements SpeechProvider {
   readonly id = "openai";
@@ -48,30 +46,6 @@ export class OpenAiSpeechProvider implements SpeechProvider {
     return { available: true };
   }
 
-  private async readApiKey(
-    signal: AbortSignal,
-  ): Promise<CredentialResult<string>> {
-    signal.throwIfAborted();
-
-    const credential = await this.credentials.read(signal);
-
-    signal.throwIfAborted();
-
-    if (!credential.ok) {
-      return credential;
-    }
-
-    const apiKey = credential.value?.trim();
-
-    if (!apiKey) {
-      return {
-        ok: false,
-        reason: "OpenAI API key is not configured.",
-      };
-    }
-
-    return { ok: true, value: apiKey };
-  }
 
   async check(signal?: AbortSignal): Promise<CapabilityAvailability> {
     const availability = this.checkSettings();
@@ -86,7 +60,7 @@ export class OpenAiSpeechProvider implements SpeechProvider {
       : timeoutSignal;
 
     try {
-      const credential = await this.readApiKey(operationSignal);
+      const credential = await readApiKey(this.credentials, "OpenAI", operationSignal);
 
       return credential.ok
         ? { available: true }
@@ -138,14 +112,9 @@ export class OpenAiSpeechProvider implements SpeechProvider {
     try {
       operationSignal.throwIfAborted();
 
-      const credential = await this.readApiKey(operationSignal);
+      const credential = await readApiKey(this.credentials, "OpenAI", operationSignal);
 
-      if (!credential.ok) {
-        return {
-          ok: false,
-          reason: credential.reason,
-        };
-      }
+      if (!credential.ok) return credential;
 
       const apiKey = credential.value;
 

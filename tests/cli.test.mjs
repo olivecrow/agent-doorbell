@@ -252,7 +252,7 @@ test("real CLI routes per-call controls to each SDK, ignores old tones, and neve
     const trace = JSON.parse(result.stdout);
     assert.deepEqual(trace.credentials, [provider]);
     assert.deepEqual(trace.requests, [provider]);
-    assert.deepEqual(trace.played, ["wav"]);
+    assert.deepEqual(trace.played, ["speech.wav"]);
     const body = trace.bodies[0];
     assert.doesNotMatch(JSON.stringify(body), /Stale personality/);
     if (provider === "openai") {
@@ -285,6 +285,27 @@ test("real CLI routes per-call controls to each SDK, ignores old tones, and neve
       assert.equal(nextBody.input.includes(directions), false);
     }
     assert.equal(await readFile(settingsPath, "utf8"), before);
+  }
+});
+
+test("missing-key sound is local and specific to the selected provider, including fresh installs", async (t) => {
+  const dir = await environment(t);
+  const preload = new URL("./fixtures/provider-routing.mjs", import.meta.url).href;
+  const args = ["notify", "--message", "Please review."];
+  async function expectSound(mode, filename, credentials) {
+    const result = await run(dir, args, preload, undefined, { DOORBELL_TEST_MODE: mode });
+    assert.equal(result.code, 0, result.stderr);
+    const trace = JSON.parse(result.stdout);
+    assert.deepEqual(trace.played, [filename]);
+    assert.deepEqual(trace.requests, []);
+    assert.deepEqual(trace.credentials, [credentials]);
+  }
+  await expectSound("missing", "notification-no-key.mp3", "openai");
+  await expectSound("unavailable", "notification.mp3", "openai");
+  for (const enabled of [false, true]) {
+    await writeFile(join(dir, "speech.json"), JSON.stringify({ enabled, provider: "gemini" }));
+    await expectSound("missing", "notification-no-key.mp3", "gemini");
+    await expectSound("unavailable", "notification.mp3", "gemini");
   }
 });
 
@@ -382,7 +403,8 @@ test("Codex argument and Claude stdin hooks share validation, fallback, and prov
       );
       assert.equal(result.code, 0, result.stderr);
       const trace = JSON.parse(result.stdout);
-      assert.deepEqual(trace.played, [mode === "speech" ? "wav" : "mp3"]);
+      const sound = mode === "missing" ? "notification-no-key.mp3" : "notification.mp3";
+      assert.deepEqual(trace.played, [mode === "speech" ? "speech.wav" : sound]);
       assert.equal(
         trace.requests.length,
         ["failure", "speech"].includes(mode) ? 1 : 0,
