@@ -1,6 +1,6 @@
 # Audio Player
 
-For a confirmed missing provider key, `notify` plays `assets/notification-no-key.mp3` as one queued file. The original piano recording plays twice in full and the supplied Google AI Studio clip follows. The complete sequence takes about 12.7 seconds. It uses normal sound playback gain and cancellation. Direct `ring` and other fallback conditions play `assets/notification.mp3`.
+For a confirmed missing provider key, `notify` plays `assets/notification-no-key.mp3` as one queued file. The second piano chime starts 0.80 seconds after the first, over its fading notes. The supplied Google AI Studio clip begins at 4.32 seconds, after the second chime finishes. The complete sequence lasts 9.96 seconds. It uses normal sound playback gain and cancellation. Direct `ring` and other fallback conditions play `assets/notification.mp3`.
 
 createAudioPlayer returns FfplayAudioPlayer on Windows, macOS, and Linux. Unsupported platform names throw. Both ring and notify use this factory.
 
