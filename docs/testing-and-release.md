@@ -2,6 +2,8 @@
 
 ## Automated Regression
 
+The production dependency audit on 2026-11-19 reported zero known vulnerabilities after updating the MCP client and server to 2.4.0, smol-toml to 1.9.1, and Zod to 4.6.7.
+
 `npm test` clean-builds TypeScript and runs Node's test runner. The 1.1.0 Windows / Node 24.15.0 batch completed 94 tests: 92 passed, with two native POSIX permission tests skipped on Windows. API calls and audio in the ordinary suite are fake boundaries; CLI, queue, MCP, and process tests launch real isolated subprocesses. Production dependency audit reported zero known vulnerabilities.
 
 Coverage includes settings defaults and migration, independent provider profiles and credentials, hidden-input prompt logic, no persistent personality, per-call controls and wrong-provider rejection before side effects, safe errors, no paid retry, buffered cleanup, cancellation, exact Gemini PCM/WAV bytes, English CLI guidance, both native hook routes, FIFO contention and recovery, stale-file ownership, process failure/timeout, PCM order/backpressure/early consumption, SDK streaming frames, and MCP discovery/cancellation/shutdown.
