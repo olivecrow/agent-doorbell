@@ -1,6 +1,6 @@
 ---
 name: doorbell
-description: Use Doorbell for explicit audible notification requests, requested completion notices, or a still-needed user response after a confirmed unanswered Codex response wait. Use native Codex questions and notifications first for attention requests. Do not use for ordinary progress narration or general audio production.
+description: Use Doorbell for explicitly requested audio or completion notices. Proactively notify once with one short, actionable sentence when a required Codex question remains unanswered for 3 minutes after the native request.
 ---
 
 # Doorbell
@@ -9,13 +9,11 @@ Use the Doorbell MCP server from any workspace. The installed runtime and normal
 
 ## When to Notify
 
-For an agent-initiated attention request, use Codex's native question or notification first and leave the actionable question in the conversation. Call Doorbell only when the active agent can confirm that this request's response wait timed out or a tool that actually waited for the user's response returned without an answer, and the user's answer or action is still needed. An optional question that can be resolved with a reasonable assumption does not require escalation.
+Send the native Codex question or notification first and keep the actionable question visible. Note its send time. After **3 minutes (180 seconds)** without a reply, proactively call Doorbell once if the user's input or action is still required. Speak one short, actionable sentence in the user's language. Leave explanations in the conversation.
 
-Use the current question/wait tool's contract and result. There is no assumed timeout shared by all questions or notifications; do not invent a duration. An asynchronous question tool's immediate return is not a completed response wait. Push/toast disappearance, an unrelated tool timeout, or a generic request-resolved event alone is not evidence of an unanswered response wait. If the outcome is unknown, do not infer a timeout or whether the user read the notification.
+Continue independent work during the interval. When blocked, use an active-turn wait that can receive user input. Measure from the original request. An immediate async return, a shorter timeout, or a disappearing toast does not establish three minutes of waiting. If a turn ends, recheck at the next active opportunity. Do not schedule a background wakeup.
 
-Before calling, check for a reply, cancellation, or a request that is no longer needed. Skip audio in those cases. Make at most one Doorbell call for the same unanswered request, including after failure; track that in the conversation rather than relying on source-name deduplication. A timeout is never approval: required input or authorization remains pending. Explicit requests for audio now or an audible completion notice may be fulfilled directly.
-
-This is an agent calling policy, not an automatic connection. Do not create timers, hooks, background monitors, or automations to implement it. It cannot wake an agent after its turn ends or detect notification read receipts. If the host does not expose an applicable wait outcome, keep the text request without claiming that delayed audio is scheduled.
+Immediately before delivery, check for an answer, cancellation, completed action, or obsolete request. Skip optional questions you can resolve yourself. Record the attempt before calling and make at most one Doorbell call for the same request across turns and rewordings, even if audio fails. A pending approval still needs affirmative authorization. Explicitly requested audio or completion notices may be delivered directly.
 
 ## Delivery
 

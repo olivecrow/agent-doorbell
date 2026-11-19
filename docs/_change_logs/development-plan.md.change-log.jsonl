@@ -1,1 +1,2 @@
 {"date":"2026-09-20","doc":"development-plan.md","change_type":"changed","summary":"Complete conversational language defaults and adjustable local speech volume.","intent":"Apply user feedback after successful cross-session speech playback.","related_files":["tests/playback-volume.test.mjs"]}
+{"date":"2026-11-19","doc":"development-plan.md","change_type":"changed","summary":"Track live host behavior when a turn ends with a pending request.","intent":"Distinguish host behavior from packaged guidance.","related_files":[]}

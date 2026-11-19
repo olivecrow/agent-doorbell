@@ -22,6 +22,6 @@ The 1.1.0 distribution uses an npm runtime package plus common local stdio MCP r
 
 The current direct-MCP route is documented in [agent installation](installation.md) and does not require a custom marketplace. Publishing to npm simplifies acquisition and upgrades, but does not by itself install a host plugin, register MCP, or activate speech.
 
-The Codex unanswered-response calling policy is documented in the source skill and agent instructions. Updating the installed runtime/plugin and verifying host-observable unanswered-wait behavior remain separate work; no timeout automation or new execution connection is implemented.
+The active agent owns the three-minute unanswered-request policy. Host-specific behavior when a turn ends before three minutes remains a live verification item.
 
 Public npm publication, tagging, pushing, and releases require a separate explicit request. See [Codex plugin](codex-plugin.md) for the completed local installation contract.

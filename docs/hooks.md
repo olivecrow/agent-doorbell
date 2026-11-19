@@ -14,7 +14,7 @@ Example argument array (replace the installed path):
 
 Only `type: "agent-turn-complete"` is handled. It becomes a short generic review request. The adapter never speaks `last-assistant-message`, `input-messages`, or `cwd`, because those fields can contain much more than a final notification. The optional thread ID stays local as the source.
 
-This completion hook does not observe unanswered questions or response-wait timeouts. The [agent calling policy](agent-integration.md#when-to-call-in-codex) uses native Codex questions/notifications first and permits one explicit Doorbell call only after a confirmed unanswered response wait while input is still needed. Installing or configuring this hook does not implement that policy; no timer, background monitor, automatic wakeup, or read-receipt detection is provided.
+The [agent calling policy](agent-integration.md#when-to-call-in-codex) directs the active agent to send one short Doorbell reminder when a required native request is still unanswered after 3 minutes. The completion hook has no access to pending questions or replies. It does not schedule reminders.
 
 ## Claude
 

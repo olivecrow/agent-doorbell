@@ -336,6 +336,38 @@ test("disabled, missing-key, invalid-message, and cancelled requests never conta
   assert.equal(globalThis.fetch.mock.callCount(), 0);
 });
 
+test("Gemini debug logging blocks buffered and streaming requests before key access or output", async (t) => {
+  const previous = process.env.GOOGLE_GENAI_DEBUG;
+  t.after(() => {
+    if (previous === undefined) delete process.env.GOOGLE_GENAI_DEBUG;
+    else process.env.GOOGLE_GENAI_DEBUG = previous;
+  });
+  const logs = ["group", "log", "warn", "error"].map((name) =>
+    t.mock.method(console, name, () => {}),
+  );
+  const fetch = t.mock.method(globalThis, "fetch", () => { throw new Error("Unexpected network"); });
+  const read = t.mock.fn(async () => ({ ok: true, value: "fake-test-key" }));
+  for (const value of ["1", "0", "false"]) {
+    process.env.GOOGLE_GENAI_DEBUG = value;
+    for (const playbackMode of ["buffered", "streaming"]) {
+      const speech = provider({ playbackMode }, { read });
+      assert.equal((await speech.check()).available, false);
+      const result = await speech.synthesize({ message: "Private test message." });
+      assert.equal(result.ok, false);
+      assert.match(result.reason, /GOOGLE_GENAI_DEBUG/);
+    }
+  }
+  assert.equal(read.mock.callCount(), 0);
+  delete process.env.GOOGLE_GENAI_DEBUG;
+  const changedDuringRead = provider({}, { read: async () => {
+    process.env.GOOGLE_GENAI_DEBUG = "1";
+    return { ok: true, value: "fake-test-key" };
+  } });
+  assert.match((await changedDuringRead.synthesize({ message: "Private test message." })).reason, /GOOGLE_GENAI_DEBUG/);
+  assert.equal(fetch.mock.callCount(), 0);
+  assert.ok(logs.every((method) => method.mock.callCount() === 0));
+});
+
 test("SDK environment configuration cannot switch Gemini endpoints or supply a missing key", async (t) => {
   const warnings = [];
   t.mock.method(console, "warn", (message) => warnings.push(String(message)));

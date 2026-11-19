@@ -11,14 +11,14 @@ The `plugins/doorbell` bundle contains a Codex manifest, the Doorbell calling sk
 
 Schemas reject unknown fields, secrets, and settings overrides. Delivery controls remain transient. Cancellation from an MCP request reaches queue waiting, synthesis, and the local player. Tool results distinguish speech from fallback sound, retain failed attempts, and remind the caller to keep its text request visible.
 
-The calling skill and `get_instructions` follow the [Codex attention policy](agent-integration.md#when-to-call-in-codex): use native questions/notifications first, then make at most one audio call for a still-needed request after a confirmed unanswered response wait. Explicit audio requests remain supported. This is guidance for the active agent; the plugin does not install timeout detection, background monitoring, or automatic wakeups. `get_instructions` reads the runtime package's `docs/agent-integration.md`, so source edits require a runtime/plugin update before they reach an installed copy.
+The calling skill and `get_instructions` follow the [Codex attention policy](agent-integration.md#when-to-call-in-codex). Send the native request first. After 3 minutes without a reply, proactively notify once with one short, actionable sentence if input is still required. Explicit audio requests may be fulfilled directly. The active agent tracks elapsed time and prior attempts. Installed copies receive updated guidance through both the plugin bundle and the runtime package.
 
 ## Local Installation
 
-Requires Node 24+ and OS credential-store access for speech. Version 1.1.0 automatically installs ffplay on Windows x64; other platforms require ffplay on PATH. For direct MCP registration without a marketplace, follow [agent installation](installation.md). To use this optional skill bundle, create an npm tarball with `npm pack`, then install it in a clean user runtime:
+Requires Node 24+ and OS credential-store access for speech. Version 1.1.1 automatically installs ffplay on Windows x64; other platforms require ffplay on PATH. For direct MCP registration without a marketplace, follow [agent installation](installation.md). To use this optional skill bundle, create an npm tarball with `npm pack`, then install it in a clean user runtime:
 
 ```sh
-npm install --prefix /absolute/user/home/.agent-doorbell/runtime /absolute/path/agent-doorbell-1.1.0.tgz
+npm install --prefix /absolute/user/home/.agent-doorbell/runtime /absolute/path/agent-doorbell-1.1.1.tgz
 ```
 
 The plugin's small bootstrap resolves `~/.agent-doorbell/runtime/node_modules/agent-doorbell/dist/mcp.js` independently of the current directory. It selects normal `~/.agent-doorbell` settings explicitly. Development settings remain isolated. API keys must exist under the normal settings scope; installing package files does not make development-scoped keys available there.

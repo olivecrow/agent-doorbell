@@ -417,6 +417,7 @@ test("disabled speech does not create a provider, even with speech options", asy
 test("OpenAI receives per-call instructions, voice and speed; a later call returns to defaults", async (t) => {
   const requests = [];
   t.mock.method(globalThis, "fetch", async (_url, init) => {
+    assert.equal(init.redirect, "error");
     requests.push(JSON.parse(init.body));
     return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
   });

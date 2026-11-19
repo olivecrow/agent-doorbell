@@ -64,6 +64,26 @@ test("enabled speech with a missing key and unavailable storage fails readiness 
   assert.equal(result.credentials.gemini, "unavailable");
   assert.doesNotMatch(JSON.stringify(result), /private-native-detail/);
 });
+test("doctor reports Gemini debug logging as a speech blocker with sound ready", async (t) => {
+  const deps = await setup(t);
+  const previous = process.env.GOOGLE_GENAI_DEBUG;
+  process.env.GOOGLE_GENAI_DEBUG = "1";
+  t.after(() => {
+    if (previous === undefined) delete process.env.GOOGLE_GENAI_DEBUG;
+    else process.env.GOOGLE_GENAI_DEBUG = previous;
+  });
+  await saveSpeechSettings({ enabled: true, provider: "gemini" }, deps.paths.speechSettingsPath);
+  const result = await doctor({
+    ...deps,
+    credentials: () => ({ read: async () => ({ ok: true, value: "fake-test-key" }) }),
+  });
+  assert.equal(result.speechReady, false);
+  assert.equal(result.soundReady, true);
+  assert.equal(result.credentials.gemini, "configured");
+  assert.ok(result.notes.some((note) => note.includes("GOOGLE_GENAI_DEBUG")));
+  assert.doesNotMatch(JSON.stringify(result), /fake-test-key/);
+});
+
 test("doctor only plays when explicitly requested and propagates test failure and cancellation", async (t) => {
   const deps = await setup(t);
   let plays = 0;
