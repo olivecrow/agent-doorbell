@@ -6,6 +6,7 @@ import type { AppPaths } from "../config/app-path.js";
 import type { CredentialReader } from "../config/credentials.js";
 import { loadSpeechSettings } from "../config/load-speech-settings.js";
 import { selectSpeechSettings } from "../config/parse-speech-settings.js";
+import { geminiLoggingBlock } from "../speech/providers/gemini-request-policy.js";
 import {
   SPEECH_PROVIDERS,
   type SpeechProviderId,
@@ -76,8 +77,11 @@ export async function doctor(
     assetAvailable &&
     player.available &&
     dependencies.player.supports("mp3");
+  const loggingBlock =
+    selected?.enabled && selected.provider === "gemini" ? geminiLoggingBlock() : undefined;
   const speechReady =
     runtimeSupported &&
+    !loggingBlock &&
     selected?.enabled === true &&
     credentials[selected.provider] === "configured" &&
     player.available &&
@@ -128,6 +132,7 @@ export async function doctor(
         : selected?.playbackMode,
     ...(playbackTest ? { playbackTest } : {}),
     notes: [
+      ...(loggingBlock ? [loggingBlock] : []),
       "Credential status does not verify API validity, quota, or network access.",
       "Readiness checks do not prove physical audio output.",
     ],

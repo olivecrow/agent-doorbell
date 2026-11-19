@@ -34,6 +34,8 @@ This is a user-account boundary, not application isolation: [CredRead uses the c
 
 During a request, the key necessarily exists as a JavaScript string and SDK authorization data in process memory. There is no secure-zeroization guarantee. Terminal input hiding also does not protect against a compromised terminal or OS. Use a dedicated key, monitor usage, and rotate or revoke it when appropriate; OpenAI's [API key guidance](https://developers.openai.com/api/docs/guides/production-best-practices#api-keys) recommends secure storage, expiration and rotation.
 
+Gemini Interactions receives a placeholder credential. Doorbell attaches the OS-stored key to a fresh set of outgoing headers only for the exact HTTPS Interactions POST and rejects redirects. Any nonempty `GOOGLE_GENAI_DEBUG` value blocks Gemini synthesis before the SDK can log request headers or the transcript. Unset the variable to resume speech. The notification falls back to the bundled sound, and doctor reports the reason. OpenAI also rejects redirects and explicitly disables SDK logging.
+
 ## Current Security Review Evidence
 
 2026-09-20: the user's configured development credential was read only inside a local validation process. Exact-match scanning of 146 project text files, including development settings and generated code, found no plaintext copy. The scan excluded dependencies, Git internals, audio assets and symbolic links; it does not cover shell history, clipboard data, backups or memory dumps. No key value, length, hash or prefix was printed, and no real credential was changed or deleted.

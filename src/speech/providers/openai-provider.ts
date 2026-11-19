@@ -165,6 +165,7 @@ export class OpenAiSpeechProvider implements SpeechProvider {
           return globalThis.fetch(url, {
             ...init,
             signal: fetchSignal,
+            redirect: "error",
           });
         },
       });

@@ -15,9 +15,12 @@ import type {
 } from "../provider.js";
 import { normalizeSpeechOptions, type SpeechOptions } from "../options.js";
 import { streamingAudio } from "../pcm-stream.js";
+import { geminiLoggingBlock } from "./gemini-request-policy.js";
 
 const SAMPLE_RATE = 24_000;
 const MAX_PCM_BYTES = SAMPLE_RATE * 2 * 60;
+const GEMINI_ORIGIN = "https://generativelanguage.googleapis.com";
+const INTERACTIONS_URL = GEMINI_ORIGIN + "/v1beta/interactions";
 
 // Interactions and models use different SDK error classes. Keep only a valid
 // numeric HTTP status; never expose the SDK message, body, or headers.
@@ -115,6 +118,8 @@ export class GeminiSpeechProvider implements SpeechProvider {
   private checkSettings(): CapabilityAvailability {
     if (!this.settings.enabled)
       return { available: false, reason: "Speech is disabled." };
+    const reason = geminiLoggingBlock();
+    if (reason) return { available: false, reason };
     return { available: true };
   }
 
@@ -188,24 +193,31 @@ export class GeminiSpeechProvider implements SpeechProvider {
     try {
       const credential = await this.readApiKey(operationSignal);
       if (!credential.ok) return { ok: false, reason: credential.reason };
+      // The credential read may have yielded before SDK construction.
+      const loggingBlock = geminiLoggingBlock();
+      if (loggingBlock) return { ok: false, reason: loggingBlock };
 
       const client = new GoogleGenAI({
-        apiKey: credential.value,
+        // The SDK requires a value to select API-key authentication. Only the
+        // final HTTPS transport below receives the actual credential.
+        apiKey: "doorbell-transport-auth",
         vertexai: false,
         enterprise: false,
         apiVersion: "v1beta",
         httpOptions: {
-          baseUrl: "https://generativelanguage.googleapis.com",
+          baseUrl: GEMINI_ORIGIN,
           retryOptions: { attempts: 1 },
           timeout: this.timeoutMs,
           fetch: (url, init) => {
-            const requestSignal =
-              init?.signal ?? (url instanceof Request ? url.signal : undefined);
-            return globalThis.fetch(url, {
-              ...init,
-              signal: requestSignal
-                ? AbortSignal.any([operationSignal, requestSignal])
-                : operationSignal,
+            const request = new Request(url, init);
+            if (request.url !== INTERACTIONS_URL || request.method !== "POST")
+              throw new Error("Unexpected Gemini request destination or method.");
+            const headers = new Headers(request.headers);
+            headers.delete("authorization");
+            headers.set("x-goog-api-key", credential.value);
+            return globalThis.fetch(request, {
+              headers,
+              signal: AbortSignal.any([operationSignal, request.signal]),
               redirect: "error",
             });
           },
