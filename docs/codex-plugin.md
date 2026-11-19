@@ -15,10 +15,10 @@ The calling skill and `get_instructions` follow the [Codex attention policy](age
 
 ## Local Installation
 
-Requires Node 24+ and OS credential-store access for speech. Version 1.1.1 automatically installs ffplay on Windows x64; other platforms require ffplay on PATH. For direct MCP registration without a marketplace, follow [agent installation](installation.md). To use this optional skill bundle, create an npm tarball with `npm pack`, then install it in a clean user runtime:
+Requires Node 24+ and OS credential-store access for speech. Version 1.1.2 automatically installs ffplay on Windows x64; other platforms require ffplay on PATH. For direct MCP registration without a marketplace, follow [agent installation](installation.md). To use this optional skill bundle, create an npm tarball with `npm pack`, then install it in a clean user runtime:
 
 ```sh
-npm install --prefix /absolute/user/home/.agent-doorbell/runtime /absolute/path/agent-doorbell-1.1.1.tgz
+npm install --prefix /absolute/user/home/.agent-doorbell/runtime /absolute/path/agent-doorbell-1.1.2.tgz
 ```
 
 The plugin's small bootstrap resolves `~/.agent-doorbell/runtime/node_modules/agent-doorbell/dist/mcp.js` independently of the current directory. It selects normal `~/.agent-doorbell` settings explicitly. Development settings remain isolated. API keys must exist under the normal settings scope; installing package files does not make development-scoped keys available there.

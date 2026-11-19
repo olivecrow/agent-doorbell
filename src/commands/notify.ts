@@ -19,11 +19,14 @@ import { playBufferedSpeech } from "../speech/play-buffered-speech.js";
 import { prepareSpeechTempDirectory } from "../speech/temp-speech-files.js";
 import type { SpeechProvider } from "../speech/provider.js";
 import { ring } from "./ring.js";
+import type { CredentialStatus } from "../config/credentials.js";
+import type { SpeechProviderId } from "../speech/providers/catalog.js";
 
 export interface NotifyDependencies {
   readonly player: AudioPlayer;
   readonly settings: SpeechSettingsResult;
   readonly createProvider: (settings: SelectedSpeechSettings) => SpeechProvider;
+  readonly credentialStatus?: (provider: SpeechProviderId, signal?: AbortSignal) => Promise<CredentialStatus>;
 }
 
 export interface NotifyResult {
@@ -53,6 +56,7 @@ export async function notify(
     settings.ok ? settings.settings.provider : undefined,
   );
   const warnings: string[] = [];
+  let missingApiKey = false;
 
   let speech: (() => Promise<DeliveryAttempt>) | undefined;
 
@@ -125,6 +129,7 @@ export async function notify(
           signal,
         );
         if (!synthesis.ok) {
+          missingApiKey = synthesis.code === "missing-api-key";
           return {
             ok: false,
             mode: "speech",
@@ -190,7 +195,11 @@ export async function notify(
   const sound = async (): Promise<DeliveryAttempt> => {
     try {
       signal?.throwIfAborted();
-      return toAttempt("sound", player.id, await ring(player, signal));
+      if (settings.ok && !settings.settings.enabled) {
+        missingApiKey = (await dependencies.credentialStatus?.(settings.settings.provider, signal)) === "missing";
+        signal?.throwIfAborted();
+      }
+      return toAttempt("sound", player.id, await ring(player, signal, missingApiKey ? "missing-api-key" : "default"));
     } catch {
       return {
         ok: false,

@@ -3,7 +3,7 @@ import { release } from "node:os";
 import { getNotificationAssetPath } from "../audio/assets.js";
 import type { AudioPlayer, PlaybackResult } from "../audio/player.js";
 import type { AppPaths } from "../config/app-path.js";
-import type { CredentialReader } from "../config/credentials.js";
+import { readCredentialStatus, type CredentialReader, type CredentialStatus } from "../config/credentials.js";
 import { loadSpeechSettings } from "../config/load-speech-settings.js";
 import { selectSpeechSettings } from "../config/parse-speech-settings.js";
 import { geminiLoggingBlock } from "../speech/providers/gemini-request-policy.js";
@@ -12,7 +12,7 @@ import {
   type SpeechProviderId,
 } from "../speech/providers/catalog.js";
 
-export type CredentialStatus = "configured" | "missing" | "unavailable";
+export type { CredentialStatus } from "../config/credentials.js";
 
 export interface DoctorDependencies {
   readonly paths: AppPaths;
@@ -35,18 +35,7 @@ export async function doctor(
     : undefined;
   const credentials = {} as Record<SpeechProviderId, CredentialStatus>;
   for (const provider of SPEECH_PROVIDERS) {
-    const deadline = AbortSignal.timeout(5000);
-    const operation = signal ? AbortSignal.any([signal, deadline]) : deadline;
-    try {
-      const result = await dependencies.credentials(provider).read(operation);
-      credentials[provider] = result.ok
-        ? result.value?.trim()
-          ? "configured"
-          : "missing"
-        : "unavailable";
-    } catch {
-      credentials[provider] = "unavailable";
-    }
+    credentials[provider] = await readCredentialStatus(dependencies.credentials(provider), signal);
     signal?.throwIfAborted();
   }
   const player = await dependencies.player.check(signal).catch(() => ({
@@ -67,7 +56,10 @@ export async function doctor(
         };
   let assetAvailable = false;
   try {
-    await access(getNotificationAssetPath());
+    await Promise.all([
+      access(getNotificationAssetPath()),
+      access(getNotificationAssetPath("missing-api-key")),
+    ]);
     assetAvailable = true;
   } catch {}
   signal?.throwIfAborted();

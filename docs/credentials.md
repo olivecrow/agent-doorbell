@@ -24,6 +24,8 @@ configure api-key [--provider openai|gemini] does not read or write speech.json.
 
 configure speech never accesses this store. It can enable default preferences or edit default voice preferences before a key is registered or when the native credential adapter is unavailable.
 
+When speech is disabled, notification delivery checks the selected account's status to choose its offline sound. The native status check clears the returned byte buffer and exposes only configured, missing, or unavailable. Only confirmed absence selects the two chimes followed by the recorded clip. With speech enabled, the provider reports a missing key from its existing credential read.
+
 ## Security Boundary
 
 `configure api-key` uses hidden terminal input with visibility toggling disabled. The key is passed directly to the credential adapter, never to the settings writer or a child-process argument. `speech.json` contains only validated non-secret settings. Only the selected provider's key is read for synthesis. Both adapters use explicit official HTTPS endpoints and convert native/network/API failures to safe results. OpenAI SDK logging is disabled. Gemini uses x-goog-api-key, stateless Interactions requests, and rejected redirects; SDK environment keys/base URLs do not override the injected credential or endpoint. Storage failure does not fall back to a plaintext file or environment variable.

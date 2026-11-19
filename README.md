@@ -11,7 +11,7 @@ In Codex, the agent asks in the conversation first. If required input is still o
 Install Node.js 24 or newer, then install Doorbell and connect the AI host you use:
 
 ```sh
-npm install --global agent-doorbell@1.1.1
+npm install --global agent-doorbell@1.1.2
 doorbell doctor
 doorbell setup codex
 # Or: doorbell setup claude
@@ -99,7 +99,7 @@ OpenAI buffered and streaming playback have Windows listening confirmation, incl
 
 `doorbell doctor [--json] [--play-sound]` provides silent diagnosis and an optional offline playback test. All production entrypoints share a cross-process FIFO queue. Native [Codex/Claude hooks](docs/hooks.md) and a [Codex plugin with MCP tools](docs/codex-plugin.md) are available. macOS/Linux remain unverified.
 
-The fallback asset, assets/notification.mp3, is the user's recording of C and E piano notes. The owner licensed it under MIT separately from the code; see [audio license](assets/LICENSE.md) and [code license](LICENSE). Public publication still requires an explicit request.
+When the selected provider has no saved API key, notifications play the original C–E piano recording twice followed by the owner's Google AI Studio clip. The sequence is bundled and works offline, including on a fresh installation. An inaccessible credential store or a synthesis failure uses the single piano recording. `doorbell ring` plays the single recording. [Audio credits](assets/LICENSE.md)
 
 ## Documentation
 

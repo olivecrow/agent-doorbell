@@ -27,6 +27,7 @@ try {
   assert.ok(listing.includes("dist/mcp.js"));
   assert.ok(listing.includes("docs/agent-integration.md"));
   assert.ok(listing.includes("assets/notification.mp3"));
+  assert.ok(listing.includes("assets/notification-no-key.mp3"));
   assert.ok(listing.includes("assets/LICENSE.md"));
   assert.ok(listing.includes("plugins/doorbell/.mcp.json"));
   assert.ok(listing.includes("player/install.mjs"));

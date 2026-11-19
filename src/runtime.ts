@@ -4,6 +4,7 @@ import { notify, type NotifyResult } from "./commands/notify.js";
 import { ring } from "./commands/ring.js";
 import { getAppPaths } from "./config/app-path.js";
 import { KeyringCredentialStore } from "./config/keyring-credential-store.js";
+import { readCredentialStatus } from "./config/credentials.js";
 import { loadSpeechSettings } from "./config/load-speech-settings.js";
 import { withDeliveryQueue } from "./coordination/file-delivery-queue.js";
 import {
@@ -36,6 +37,8 @@ export async function deliverNotification(
         {
           player: createAudioPlayer(),
           settings,
+          credentialStatus: (provider, signal) =>
+            readCredentialStatus(new KeyringCredentialStore(paths.credentialService, provider), signal),
           createProvider: (selected) =>
             createSpeechProvider(
               selected,

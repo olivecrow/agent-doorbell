@@ -4,10 +4,11 @@ import type { AudioPlayer, PlaybackResult } from "../audio/player.js";
 export async function ring(
   player: AudioPlayer,
   signal?: AbortSignal,
+  sound: "default" | "missing-api-key" = "default",
 ): Promise<PlaybackResult> {
   return player.play(
     {
-      path: getNotificationAssetPath(),
+      path: getNotificationAssetPath(sound),
       format: "mp3",
     },
     signal,

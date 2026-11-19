@@ -1,10 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import wavefile from "wavefile";
 import type { GeminiSpeechSettings } from "../../config/parse-speech-settings.js";
-import type {
-  CredentialReader,
-  CredentialResult,
-} from "../../config/credentials.js";
+import type { CredentialReader } from "../../config/credentials.js";
+import { readApiKey } from "../read-api-key.js";
 import { normalizeAttentionMessage } from "../../domain/attention.js";
 import type { CapabilityAvailability } from "../../domain/results.js";
 import type { SpeechSynthesisResult } from "../failure.js";
@@ -123,18 +121,6 @@ export class GeminiSpeechProvider implements SpeechProvider {
     return { available: true };
   }
 
-  private async readApiKey(
-    signal: AbortSignal,
-  ): Promise<CredentialResult<string>> {
-    signal.throwIfAborted();
-    const credential = await this.credentials.read(signal);
-    signal.throwIfAborted();
-    if (!credential.ok) return credential;
-    const apiKey = credential.value?.trim();
-    return apiKey
-      ? { ok: true, value: apiKey }
-      : { ok: false, reason: "Gemini API key is not configured." };
-  }
 
   async check(signal?: AbortSignal): Promise<CapabilityAvailability> {
     const availability = this.checkSettings();
@@ -147,7 +133,7 @@ export class GeminiSpeechProvider implements SpeechProvider {
       ...(signal ? [signal] : []),
     ]);
     try {
-      const credential = await this.readApiKey(operationSignal);
+      const credential = await readApiKey(this.credentials, "Gemini", operationSignal);
       return credential.ok
         ? { available: true }
         : { available: false, reason: credential.reason };
@@ -191,8 +177,8 @@ export class GeminiSpeechProvider implements SpeechProvider {
       ...(signal ? [signal] : []),
     ]);
     try {
-      const credential = await this.readApiKey(operationSignal);
-      if (!credential.ok) return { ok: false, reason: credential.reason };
+      const credential = await readApiKey(this.credentials, "Gemini", operationSignal);
+      if (!credential.ok) return credential;
       // The credential read may have yielded before SDK construction.
       const loggingBlock = geminiLoggingBlock();
       if (loggingBlock) return { ok: false, reason: loggingBlock };

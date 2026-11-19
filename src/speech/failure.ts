@@ -8,5 +8,6 @@ export type SpeechSynthesisResult =
     |{
         readonly ok: false;
         readonly reason: string;
+        readonly code?: "missing-api-key";
         readonly status?: number;
     }
