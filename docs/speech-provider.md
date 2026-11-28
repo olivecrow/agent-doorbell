@@ -14,7 +14,7 @@ Both adapters' check() inspects activation and credential availability without n
 
 ## Gemini Request Mapping
 
-GeminiSpeechProvider uses the official @google/genai 2.23.0 SDK with `gemini-3.1-flash-tts-preview`. The default voice is Kore; [Gemini TTS](gemini-tts.md) documents its 30 voices, Interactions request, PCM format validation, and WAV wrapping. Its per-call prompt precedes the final Transcript; voice can be overridden per call. Player preflight, temporary-file lifecycle, and sound fallback are shared. [Agent integration](agent-integration.md) supplies official manuals and usage examples for each provider.
+GeminiSpeechProvider uses the official @google/genai 2.23.0 SDK to call Interactions. The 3.8 models use structured style metadata and return WAV. The 3.1 preview uses a prompt followed by the Transcript and returns raw PCM for WAV wrapping. The separate REST catalog adapter reads available models, voices, and stored designed-voice samples. Player preflight, temporary-file lifecycle, and sound fallback are shared. See [Gemini TTS](gemini-tts.md) for the request and [agent integration](agent-integration.md) for per-call options.
 
 ## Errors and Cancellation
 

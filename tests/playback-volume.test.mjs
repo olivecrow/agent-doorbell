@@ -106,8 +106,8 @@ test("buffered and streaming notifications pass local gain only to speech playba
       assert.equal(result.delivery.mode, "sound");
       assert.equal(requests, 1);
       assert.deepEqual(played, [
-        { format: playbackMode === "streaming" ? "pcm" : "wav", volume: 1.5 },
         { format: "mp3", volume: undefined },
+        { format: playbackMode === "streaming" ? "pcm" : "wav", volume: 1.5 },
       ]);
     }
   }

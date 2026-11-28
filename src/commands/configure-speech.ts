@@ -12,6 +12,7 @@ import {
   isSpeechProviderId,
   type SpeechProviderId,
 } from "../speech/providers/catalog.js";
+import type { GeminiTtsModel } from "../speech/providers/gemini.js";
 import {
   configurationFailure,
   createConfigurePrompts,
@@ -23,6 +24,7 @@ export interface SpeechSettingsPatch {
   readonly provider?: SpeechProviderId;
   readonly enabled?: boolean;
   readonly voice?: string;
+  readonly model?: GeminiTtsModel;
   readonly playbackMode?: SpeechPlaybackMode;
   readonly playbackVolume?: number;
 }
@@ -48,6 +50,7 @@ export async function configureSpeech(
             "provider",
             "enabled",
             "voice",
+            "model",
             "playbackMode",
             "playbackVolume",
           ].includes(key),
@@ -73,6 +76,8 @@ export async function configureSpeech(
         current.provider,
       );
       const catalog = SPEECH_PROVIDER_CATALOG[provider];
+      const savedVoice = current.providers[provider].voice;
+      const voices = catalog.voices as readonly string[];
       changes = {
         provider,
         enabled: await prompts.confirm(
@@ -86,8 +91,8 @@ export async function configureSpeech(
         ),
         voice: await prompts.choose<string>(
           `${catalog.label} voice:`,
-          catalog.voices,
-          current.providers[provider].voice,
+          voices.includes(savedVoice) ? voices : [savedVoice, ...voices],
+          savedVoice,
         ),
         playbackVolume: Number(
           await prompts.text(
@@ -121,6 +126,7 @@ export async function configureSpeech(
         ...current.providers,
         [provider]: {
           ...current.providers[provider],
+          ...(changes.model === undefined ? {} : { model: changes.model }),
           voice: changes.voice ?? current.providers[provider].voice,
         },
       },

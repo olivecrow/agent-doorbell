@@ -18,10 +18,14 @@ src/cli.ts compiles to dist/cli.js, exposed as doorbell by package.json. All bui
 | configure speech --volume NUMBER                           | Set local speech gain from 0.25 to 4; default 1; leave activation and credentials unchanged            |
 | configure speech --show                                    | Print effective non-secret settings as JSON; no writes or credential access                            |
 | configure speech --list-voices [--provider openai\|gemini] | List voices and the default for the active or specified provider, without writes                       |
+| configure gemini                                          | Fetch live catalogs, choose a model and voice, preview available samples, and confirm the selection |
+| configure gemini --list-models / --list-voices            | Read the Gemini API catalog and print JSON |
+| configure gemini --model ID --voice ID                    | Validate the pair against the live catalogs and save it |
+| configure gemini --preview-voice ID                       | Fetch and play an existing sample for a stored designed voice |
 | agent-instructions                                         | Print current non-secret configuration, bundled agent instructions, and official provider manual links |
 | notify --message TEXT [--source NAME] [--voice NAME]       | Attempt speech, then packaged sound; optional voice override for this call                             |
 | notify ... --instructions TEXT [--speed NUMBER]            | OpenAI delivery instructions and speed from 0.25 to 4.0                                                |
-| notify ... --prompt TEXT                                   | Gemini delivery prompt, followed by the message as Transcript                                          |
+| notify ... --prompt TEXT                                   | Per-call Gemini delivery style |
 | ring [--event NAME] [--message TEXT]                       | Play the packaged MP3                                                                                  |
 | doctor                                                     | Silent environment and credential-status checks; optional --json and explicit --play-sound             |
 
@@ -33,17 +37,19 @@ configure api-key accepts a provider option, never a key argument. It requires a
 
 configure speech has no credential dependency and works before a key exists. Its option form is noninteractive; the interactive form selects a provider before offering that provider's voices and confirms before saving. Invalid existing settings are reported, never silently reset. Provider or voice edits preserve activation and playback mode. Each provider retains its default voice. --playback-mode accepts buffered or streaming; the interactive form includes that choice. There is no tone question or saved personality setting; configure --tone/--reset-tone and notify --agent-tone are rejected.
 
+`configure gemini` uses the saved Gemini API key. Its selection forms save the model and voice together and select Gemini for speech, preserving activation. The listing and preview forms leave settings untouched. See [Gemini TTS](gemini-tts.md) for voice compatibility and sample availability.
+
 ## Per-Call Speech and Notification Flow
 
 notify trims and validates message (1-120 UTF-16 code units) and optional directions (at most 2000 code units). Speech options are passed separately to synthesize({ message, speech }, signal?). They never modify saved settings or carry over to the next request. Legacy style.tone is ignored. Read [agent integration](agent-integration.md) for provider mappings, default behavior, examples, and official manuals.
 
-OpenAI accepts instructions, speed, and voice; Gemini accepts prompt and voice. Gemini input contains fixed synthesis guidance, the optional prompt verbatim after outer trimming, and the final Transcript. Omitted voice uses the saved default. Blank directions omit custom instructions. Invalid types, ranges, unknown fields, unsupported voices, and wrong-provider controls return exit 2 before credentials, cleanup, network requests, or playback. Core notify validates options before player access too.
+OpenAI accepts instructions, speed, and voice. Gemini 3.8 puts the optional prompt in style metadata, and the Gemini 3.1 preview puts it before the final Transcript. A per-call `--voice` accepts one of the provider's built-in presets. Omitted voice uses the saved default, including a Gemini catalog voice. Blank directions omit custom instructions. Invalid types, ranges, unknown fields, unsupported voices, and wrong-provider controls return exit 2 before credentials, cleanup, network requests, or playback. Core notify validates options before player access too.
 
 The CLI loads settings using the same captured application paths used for the credential service, then supplies only the selected provider's key reader to its adapter. notify accepts no provider/model/activation overrides. It performs conservative stale-file cleanup before notification. Invalid settings emit a warning and fall back to sound.
 
 Saved playbackVolume is applied locally to buffered and streaming speech, with peak limiting when adjusted. It is not a notify option or provider API parameter. `--volume` may be combined with other speech updates but not --show/--list-voices; invalid values fail before reading credentials or playing audio.
 
-For speech, notify checks WAV support and player availability before creating the provider. A streaming selection checks provider and PCM player capability before synthesis; unsupported modes use buffered with a warning. OpenAI streams PCM, while Gemini currently selects buffered after failed continuous-playback validation. Synthesis, file preparation, playback, and cleanup precede any sound fallback. No second paid synthesis or alternate provider is attempted.
+For speech, notify checks WAV support and player availability before creating the provider. A streaming selection checks provider and PCM player capability before synthesis; unsupported modes use buffered with a warning. OpenAI streams PCM, while Gemini currently selects buffered after failed continuous-playback validation. When the WAV file or first PCM chunk is ready, Doorbell plays the original piano cue, then plays the voice. If voice playback fails after the cue completes, the command reports the speech failure and counts the completed cue as sound delivery. See [audio player](audio-player.md) for the sequence and volume behavior.
 
 The legacy ring event/message arguments are parsed but do not affect playback. Codex and Claude hooks use the shared runtime and FIFO delivery queue. See [hooks](hooks.md) and [delivery coordination](delivery-coordination.md).
 

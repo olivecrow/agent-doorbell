@@ -12,6 +12,11 @@ export interface ConfigurePrompts {
     values: readonly T[],
     current: T,
   ): Promise<T>;
+  search<T extends string>(
+    message: string,
+    choices: readonly { value: T; name: string }[],
+    current: T | undefined,
+  ): Promise<T>;
   confirm(message: string, current: boolean): Promise<boolean>;
   text(
     message: string,
@@ -27,7 +32,7 @@ export async function createConfigurePrompts(
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     throw new Error("Interactive configuration requires a terminal.");
   }
-  const { confirm, input, password, select } =
+  const { confirm, input, password, search, select } =
     await import("@inquirer/prompts");
   signal.throwIfAborted();
   const context = { signal, clearPromptOnDone: true };
@@ -46,6 +51,15 @@ export async function createConfigurePrompts(
         },
         context,
       ),
+    search: (message, choices, current) =>
+      search({
+        message,
+        ...(current === undefined ? {} : { default: current }),
+        source: (term) => {
+          const query = term?.trim().toLowerCase();
+          return query ? choices.filter(({ name }) => name.toLowerCase().includes(query)) : choices;
+        },
+      }, context),
     confirm: (message, current) =>
       confirm({ message, default: current }, context),
     text: (message, current, validate) =>

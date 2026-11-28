@@ -11,7 +11,7 @@ In Codex, the agent asks in the conversation first. If required input is still o
 Install Node.js 24 or newer, then install Doorbell and connect the AI host you use:
 
 ```sh
-npm install --global agent-doorbell@1.1.2
+npm install --global agent-doorbell@1.1.3
 doorbell doctor
 doorbell setup codex
 # Or: doorbell setup claude
@@ -52,12 +52,11 @@ To use Gemini instead:
 
 ```sh
 doorbell configure api-key --provider gemini
-doorbell configure speech --provider gemini --enable
-doorbell configure speech --list-voices --provider gemini
-doorbell configure speech --voice Puck
+doorbell configure gemini
+doorbell configure speech --enable
 ```
 
-Gemini uses `gemini-3.1-flash-tts-preview`, with Kore as the default and 30 built-in voices. It uses the Gemini API, not Vertex AI or a subscription login. The model is a preview; see Google's [model reference](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-tts-preview) and [speech guide](https://ai.google.dev/gemini-api/docs/speech-generation).
+`configure gemini` uses your stored Gemini API key to load the current model and voice catalogs, then saves your selection. Pick `gemini-3.8-flash-tts` or `gemini-3.8-flash-lite-tts` to use Google's extended voice catalog. Stored designed voices can offer a playable sample. The default Gemini profile uses `gemini-3.1-flash-tts-preview` and Kore. See [Gemini TTS](docs/gemini-tts.md) for listing commands, preview availability, and model compatibility.
 
 Each provider has its own key and remembered voice. `doorbell configure speech --provider openai` switches back without losing either voice or changing activation. Speaking style comes from the calling agent on each notification. The API-key command defaults to OpenAI even when Gemini is selected, so specify `--provider gemini` to manage the Gemini key.
 
@@ -92,6 +91,8 @@ Calling agents should run `doorbell agent-instructions`. It prints current non-s
 Speech failure falls back to the packaged MP3 without another paid request. Exit code 0 means audio playback succeeded; 1 means delivery failed; 2 means invalid arguments. Cancellation uses 130 for SIGINT and 143 for SIGTERM.
 
 ## Implementation Status
+
+Spoken notifications play the bundled C and E piano chime before speech. The cue lasts about 3.5 seconds and also plays before Gemini voice previews.
 
 Buffered OpenAI and Gemini synthesis, temporary-file playback/cleanup, offline fallback, cancellation, separate configuration commands, provider-specific OS credentials and voices, and per-call performance controls are implemented. Existing OpenAI settings are read compatibly and upgraded to provider profiles only when saved.
 

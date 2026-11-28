@@ -57,6 +57,14 @@ export async function notify(
   );
   const warnings: string[] = [];
   let missingApiKey = false;
+  let chimePlayed = false;
+
+  const playChime = async (): Promise<PlaybackResult> => {
+    signal?.throwIfAborted();
+    const result = await ring(player, signal);
+    chimePlayed = result.ok;
+    return result;
+  };
 
   let speech: (() => Promise<DeliveryAttempt>) | undefined;
 
@@ -138,6 +146,8 @@ export async function notify(
           };
         }
         if (synthesis.audio.mode === "streaming") {
+          const audio = synthesis.audio;
+          let source: AsyncIterator<Uint8Array> | undefined;
           try {
             signal?.throwIfAborted();
             if (effective.playbackMode !== "streaming" || !player.playStream)
@@ -147,17 +157,35 @@ export async function notify(
                 handler: provider.id,
                 reason: "Unexpected streaming audio.",
               };
+            const iterator = audio.chunks[Symbol.asyncIterator]();
+            source = iterator;
+            // Wait for actual speech before playing the cue. Hold one chunk
+            // while the cue plays, then let the player pull the rest.
+            const first = await iterator.next();
+            if (first.done)
+              return { ok: false, mode: "speech", handler: provider.id, reason: "Speech audio is empty." };
+            const chime = await playChime();
+            signal?.throwIfAborted();
+            if (!chime.ok) return toAttempt("speech", player.id, chime);
+
+            const chunks = (async function* () {
+              yield first.value;
+              for (let next = await iterator.next(); !next.done; next = await iterator.next()) {
+                yield next.value;
+              }
+            })();
             return toAttempt(
               "speech",
               player.id,
               await player.playStream(
-                synthesis.audio,
+                { ...audio, chunks },
                 signal,
                 effective.playbackVolume,
               ),
             );
           } finally {
-            synthesis.audio.cancel();
+            audio.cancel();
+            await source?.return?.().catch(() => {});
           }
         }
         signal?.throwIfAborted();
@@ -174,6 +202,7 @@ export async function notify(
           player,
           signal,
           effective.playbackVolume,
+          playChime,
         );
 
         if (playback.cleanupWarning !== undefined) {
@@ -195,6 +224,8 @@ export async function notify(
   const sound = async (): Promise<DeliveryAttempt> => {
     try {
       signal?.throwIfAborted();
+      // A completed prelude has already delivered the normal fallback sound.
+      if (chimePlayed) return toAttempt("sound", player.id, { ok: true });
       if (settings.ok && !settings.settings.enabled) {
         missingApiKey = (await dependencies.credentialStatus?.(settings.settings.provider, signal)) === "missing";
         signal?.throwIfAborted();
