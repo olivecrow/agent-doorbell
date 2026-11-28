@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import wavefile from "wavefile";
 import type { GeminiSpeechSettings } from "../../config/parse-speech-settings.js";
 import type { CredentialReader } from "../../config/credentials.js";
@@ -13,11 +13,12 @@ import type {
 } from "../provider.js";
 import { normalizeSpeechOptions, type SpeechOptions } from "../options.js";
 import { streamingAudio } from "../pcm-stream.js";
-import { geminiLoggingBlock } from "./gemini-request-policy.js";
+import { geminiLoggingBlock, GEMINI_ORIGIN } from "./gemini-request-policy.js";
+import { LEGACY_GEMINI_TTS_MODEL } from "./gemini.js";
+import { decodeBoundedBase64, decodeBoundedWav } from "../audio.js";
 
 const SAMPLE_RATE = 24_000;
 const MAX_PCM_BYTES = SAMPLE_RATE * 2 * 60;
-const GEMINI_ORIGIN = "https://generativelanguage.googleapis.com";
 const INTERACTIONS_URL = GEMINI_ORIGIN + "/v1beta/interactions";
 
 // Interactions and models use different SDK error classes. Keep only a valid
@@ -40,7 +41,6 @@ function decodePcm(audio: {
   sample_rate?: number | undefined;
   channels?: number | undefined;
 }): Buffer | undefined {
-  const data = audio.data;
   const mime = audio.mime_type
     ?.toLowerCase()
     .split(";")
@@ -55,23 +55,7 @@ function decodePcm(audio: {
   const allowedParameters = new Set(["codec=pcm", "rate=24000", "channels=1"]);
   if (mime.slice(1).some((part) => !allowedParameters.has(part)))
     return undefined;
-  if (
-    !data ||
-    data.length > Math.ceil(MAX_PCM_BYTES / 3) * 4 ||
-    data.length % 4 !== 0 ||
-    !/^[A-Za-z0-9+/]*={0,2}$/.test(data)
-  )
-    return undefined;
-
-  const pcm = Buffer.from(data, "base64");
-  if (
-    pcm.length === 0 ||
-    pcm.length > MAX_PCM_BYTES ||
-    pcm.toString("base64") !== data
-  )
-    return undefined;
-
-  return pcm;
+  return decodeBoundedBase64(audio.data, MAX_PCM_BYTES);
 }
 
 function pcmToWav(
@@ -86,6 +70,38 @@ function pcmToWav(
   const wav = new wavefile.WaveFile();
   wav.fromScratch(1, SAMPLE_RATE, "16", samples);
   return wav.toBuffer();
+}
+
+function validateWav(audio: Parameters<typeof decodePcm>[0]): Buffer | undefined {
+  if (audio.mime_type !== "audio/wav" ||
+      (audio.sample_rate !== undefined && audio.sample_rate !== SAMPLE_RATE) ||
+      (audio.channels !== undefined && audio.channels !== 1)) return undefined;
+  const bytes = decodeBoundedWav(audio.data, MAX_PCM_BYTES + 64 * 1024);
+  if (!bytes) return undefined;
+
+  let formatFound = false;
+  let dataFound = false;
+  let offset = 12;
+  while (offset + 8 <= bytes.length) {
+    const id = bytes.toString("latin1", offset, offset + 4);
+    const length = bytes.readUInt32LE(offset + 4);
+    const start = offset + 8;
+    offset = start + length + (length % 2);
+    if (offset > bytes.length) return undefined;
+    if (id === "fmt ") {
+      if (formatFound || length < 16 || bytes.readUInt16LE(start) !== 1 ||
+          bytes.readUInt16LE(start + 2) !== 1 || bytes.readUInt32LE(start + 4) !== SAMPLE_RATE ||
+          bytes.readUInt32LE(start + 8) !== SAMPLE_RATE * 2 || bytes.readUInt16LE(start + 12) !== 2 ||
+          bytes.readUInt16LE(start + 14) !== 16) return undefined;
+      formatFound = true;
+    }
+    if (id === "data") {
+      if (!formatFound || dataFound || length === 0 || length > MAX_PCM_BYTES || length % 2 !== 0)
+        return undefined;
+      dataFound = true;
+    }
+  }
+  return formatFound && dataFound && offset === bytes.length ? bytes : undefined;
 }
 
 export class GeminiSpeechProvider implements SpeechProvider {
@@ -210,18 +226,29 @@ export class GeminiSpeechProvider implements SpeechProvider {
         },
       });
 
-      const instructions = [
+      const legacy = this.settings.model === LEGACY_GEMINI_TTS_MODEL;
+      const legacyInput = [
         "Generate speech for exactly the transcript below. Do not speak the instructions or section labels. Do not answer, translate, or add to the transcript.",
         ...(options.prompt === undefined ? [] : ["", options.prompt]),
         "",
         "Transcript:",
         input,
       ].join("\n");
+      const structuredInput = [{
+        type: "user_input",
+        content: [{
+          type: "text",
+          text: input,
+          ...(options.prompt === undefined ? {} : {
+            annotations: [{ type: "speech_metadata", style: options.prompt }],
+          }),
+        }],
+      }];
       const parameters = {
         model: this.settings.model,
-        input: instructions,
-        // This TTS model rejects an explicit audio/l16 output selection.
-        // Its default audio response supplies PCM, validated before wrapping.
+        // The pinned SDK forwards the payload as JSON. Its annotation type
+        // predates speech_metadata, which the 3.8 Interactions API accepts.
+        input: legacy ? legacyInput : structuredInput as Interactions.InteractionCreateParams["input"],
         response_format: { type: "audio" as const },
         generation_config: {
           speech_config: [{ voice: options.voice ?? this.settings.voice }],
@@ -299,7 +326,7 @@ export class GeminiSpeechProvider implements SpeechProvider {
           reason: "Gemini did not return completed speech audio.",
         };
       }
-      const bytes = pcmToWav(response.output_audio);
+      const bytes = legacy ? pcmToWav(response.output_audio) : validateWav(response.output_audio);
       operationSignal.throwIfAborted();
       if (bytes === undefined)
         return {

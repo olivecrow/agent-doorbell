@@ -161,8 +161,14 @@ test("Gemini streams validated audio deltas once, preserves prompt and requires 
 test("stream preflight selects buffered before synthesis; a started stream never triggers another synthesis", async () => {
   for (const streaming of [false, true]) {
     const synthesized = [];
+    const playback = [];
     let cancelled = 0;
-    let sound = 0;
+    const chunks = async function* () {
+      playback.push("first chunk");
+      yield Uint8Array.of(1, 2);
+      playback.push("second chunk");
+      yield Uint8Array.of(3, 4);
+    };
     const result = await notify(
       { message: "Review." },
       {
@@ -176,11 +182,12 @@ test("stream preflight selects buffered before synthesis; a started stream never
             reason: "No PCM support.",
           }),
           play: async ({ format }) => {
-            if (format === "mp3") sound++;
+            playback.push(format);
             return { ok: true };
           },
           playStream: async (audio) => {
-            await collect(audio.chunks);
+            playback.push("pcm playback");
+            assert.deepEqual(await collect(audio.chunks), [1, 2, 3, 4]);
             return { ok: false, reason: "Device failed." };
           },
         },
@@ -198,7 +205,7 @@ test("stream preflight selects buffered before synthesis; a started stream never
                       format: "wav",
                       bytes: Uint8Array.from([1, 2]),
                     }
-                  : streamingAudio(from([[1, 2]]), () => cancelled++),
+                  : streamingAudio(chunks(), () => cancelled++),
             };
           },
         }),
@@ -206,43 +213,64 @@ test("stream preflight selects buffered before synthesis; a started stream never
     );
     assert.deepEqual(synthesized, [streaming ? "streaming" : "buffered"]);
     assert.equal(result.delivery.mode, streaming ? "sound" : "speech");
-    assert.equal(sound, streaming ? 1 : 0);
+    assert.deepEqual(playback, streaming
+      ? ["first chunk", "mp3", "pcm playback", "second chunk"]
+      : ["mp3", "wav"]);
     assert.equal(cancelled, streaming ? 1 : 0);
     if (!streaming) assert.match(result.warnings[0], /before requesting audio/);
   }
 });
 
-test("cancelled stream releases upstream without a sound fallback", async () => {
-  const controller = new AbortController();
-  let closed = 0;
-  const result = await notify(
-    { message: "Review." },
-    {
-      settings: settings(),
-      player: {
-        id: "fake",
-        supports: () => true,
-        check: async () => ({ available: true }),
-        checkStreaming: async () => ({ available: true }),
-        playStream: async () => {
-          controller.abort();
-          return { ok: false, reason: "Cancelled." };
+test("cancelling the chime or streamed speech releases upstream without a sound fallback", async () => {
+  for (const cancelDuringChime of [true, false]) {
+    const controller = new AbortController();
+    let cancelled = 0;
+    let closed = false;
+    const plays = [];
+    const chunks = async function* () {
+      try {
+        yield Uint8Array.of(1, 2);
+        assert.fail("Cancelled playback must not pull the second chunk.");
+      } finally {
+        closed = true;
+      }
+    };
+    const result = await notify(
+      { message: "Review." },
+      {
+        settings: settings(),
+        player: {
+          id: "fake",
+          supports: () => true,
+          check: async () => ({ available: true }),
+          checkStreaming: async () => ({ available: true }),
+          playStream: async () => {
+            plays.push("pcm");
+            controller.abort();
+            return { ok: false, reason: "Cancelled." };
+          },
+          play: async ({ format }) => {
+            plays.push(format);
+            if (cancelDuringChime) controller.abort();
+            return { ok: true };
+          },
         },
-        play: async () => assert.fail("Unexpected fallback"),
-      },
-      createProvider: () => ({
-        id: "fake",
-        capabilities: { supportsStreaming: true },
-        synthesize: async () => ({
-          ok: true,
-          audio: streamingAudio(from([[1, 2]]), () => closed++),
+        createProvider: () => ({
+          id: "fake",
+          capabilities: { supportsStreaming: true },
+          synthesize: async () => ({
+            ok: true,
+            audio: streamingAudio(chunks(), () => cancelled++),
+          }),
         }),
-      }),
-    },
-    controller.signal,
-  );
-  assert.equal(result.delivery.cancelled, true);
-  assert.equal(closed, 1);
+      },
+      controller.signal,
+    );
+    assert.equal(result.delivery.cancelled, true);
+    assert.equal(cancelled, 1);
+    assert.equal(closed, true);
+    assert.deepEqual(plays, cancelDuringChime ? ["mp3"] : ["mp3", "pcm"]);
+  }
 });
 
 test("PCM process receives audio before generation ends, applies backpressure and closes on error/cancel", async (t) => {

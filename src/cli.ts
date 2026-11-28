@@ -6,6 +6,9 @@ import {
 } from "./domain/attention.js";
 import { parseArgs } from "node:util";
 import { configureApiKey } from "./commands/configure-api-key.js";
+import { configureGemini, type GeminiProfileSelection } from "./commands/configure-gemini.js";
+import { GeminiCatalog, GeminiCatalogError } from "./speech/providers/gemini-catalog.js";
+import { isGeminiCatalogVoiceId, isGeminiTtsModel } from "./speech/providers/gemini.js";
 import {
   configureSpeech,
   type SpeechSettingsPatch,
@@ -33,6 +36,7 @@ import {
 
 import {
   deliverNotification,
+  playGeminiVoicePreview,
   playNotificationSound,
   inspectEnvironment,
 } from "./runtime.js";
@@ -59,6 +63,9 @@ type CliCommand =
   | { kind: "hook"; agent: HookAgent; payload?: string }
   | { kind: "configure-api-key"; provider: SpeechProviderId }
   | { kind: "configure-speech"; patch?: SpeechSettingsPatch }
+  | { kind: "configure-gemini"; selection?: GeminiProfileSelection }
+  | { kind: "list-gemini-models" | "list-gemini-voices" }
+  | { kind: "preview-gemini-voice"; voice: string }
   | { kind: "show-speech" }
   | { kind: "list-voices"; provider?: SpeechProviderId }
   | { kind: "agent-instructions" };
@@ -146,6 +153,33 @@ function parseCommand(args: readonly string[]): CliCommand {
         };
       }
     }
+    if (target === "gemini") {
+      try {
+        const { values } = parseArgs({
+          args: options,
+          options: {
+            "list-models": { type: "boolean" },
+            "list-voices": { type: "boolean" },
+            "preview-voice": { type: "string" },
+            model: { type: "string" },
+            voice: { type: "string" },
+          },
+        });
+        const count = Object.keys(values).length;
+        if (count === 0) return { kind: "configure-gemini" };
+        if (count === 1) {
+          if (values["list-models"]) return { kind: "list-gemini-models" };
+          if (values["list-voices"]) return { kind: "list-gemini-voices" };
+          const voice = values["preview-voice"];
+          if (voice && isGeminiCatalogVoiceId(voice)) return { kind: "preview-gemini-voice", voice };
+        }
+        if (count === 2 && isGeminiTtsModel(values.model) && values.voice && isGeminiCatalogVoiceId(values.voice))
+          return { kind: "configure-gemini", selection: { model: values.model, voice: values.voice } };
+      } catch {
+        // Never echo model or voice arguments in errors.
+      }
+      return { kind: "invalid", message: "Use configure gemini [--list-models | --list-voices | --preview-voice ID | --model ID --voice ID]." };
+    }
     if (target === "speech") {
       if (options.length === 0) return { kind: "configure-speech" };
       try {
@@ -226,7 +260,7 @@ function parseCommand(args: readonly string[]): CliCommand {
     return {
       kind: "invalid",
       message:
-        "Use configure api-key [--provider openai|gemini] or configure speech. Never pass API keys as arguments.",
+        "Use configure api-key [--provider openai|gemini], configure speech, or configure gemini. Never pass API keys as arguments.",
     };
   }
 
@@ -371,6 +405,9 @@ function printHelp(): void {
   doorbell configure speech --volume <0.25-4> (local speech gain; default 1)
   doorbell configure speech --show
   doorbell configure speech --list-voices [--provider openai|gemini]
+  doorbell configure gemini
+  doorbell configure gemini --list-models | --list-voices | --preview-voice ID
+  doorbell configure gemini --model ID --voice ID
   doorbell agent-instructions
   doorbell doctor [--json] [--play-sound]
   doorbell setup codex|claude [--preview] [--remove]
@@ -380,12 +417,12 @@ function printHelp(): void {
 API keys are entered interactively and stored separately by provider in the OS credential store.
 configure api-key defaults to OpenAI; use --provider gemini for a Gemini API key.
 Speech settings are independent. Default provider: OpenAI (gpt-4o-mini-tts, nova).
-Gemini: gemini-3.1-flash-tts-preview, default voice Kore. Each provider remembers its voice.
+Gemini defaults: gemini-3.1-flash-tts-preview and Kore. Use configure gemini to browse Google's catalog.
 Speech is disabled until explicitly enabled. --enable may incur charges from the selected provider.
 Playback defaults to buffered; streaming uses raw PCM. A provider failure falls back to the bundled sound, never another provider.
 Delivery instructions, prompts, speed, and voice overrides apply only to the current notify call.
 Tone is never saved. Old saved tones are ignored. Instructions/prompt allow up to 2000 characters.
-Gemini appends --message as the Transcript after --prompt; describe delivery without repeating it.
+Gemini uses --prompt for delivery style. Keep the words to speak in --message.
 AI agents: read doorbell agent-instructions before calling notify.`);
 }
 
@@ -490,6 +527,35 @@ async function runCommand(
         return result.cancelled ? 130 : 1;
       }
       console.log("[doorbell] Speech settings saved.");
+      return 0;
+    }
+
+    case "list-gemini-models":
+    case "list-gemini-voices":
+    case "preview-gemini-voice":
+    case "configure-gemini": {
+      const paths = getAppPaths();
+      const catalog = new GeminiCatalog(new KeyringCredentialStore(paths.credentialService, "gemini"));
+      const warning = (message: string) => console.error(`[doorbell] ${message}`);
+      const preview = async (id: string, signal: AbortSignal) => {
+        const bytes = await catalog.getVoiceSample(id, signal);
+        const result = await playGeminiVoicePreview(bytes, signal);
+        if (result.cleanupWarning) warning(result.cleanupWarning);
+        if (!result.ok) throw new GeminiCatalogError(result.reason);
+      };
+      if (command.kind === "configure-gemini") {
+        const result = await configureGemini({ settingsPath: paths.speechSettingsPath, catalog, preview, warning }, signal, command.selection);
+        if (!result.ok) {
+          warning(result.reason);
+          return result.cancelled ? 130 : 1;
+        }
+        console.log("[doorbell] Gemini speech settings saved.");
+      } else if (command.kind === "preview-gemini-voice") {
+        await preview(command.voice, signal);
+      } else {
+        const items = command.kind === "list-gemini-models" ? await catalog.listModels(signal) : await catalog.listVoices(signal);
+        console.log(JSON.stringify(items, null, 2));
+      }
       return 0;
     }
 

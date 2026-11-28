@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { mkdtemp, readFile, writeFile, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import wavefile from "wavefile";
 import {
   parseSpeechSettings,
   selectSpeechSettings,
@@ -297,6 +298,41 @@ test("Gemini sends one private, stateless request and wraps PCM as an exact mono
   assert.equal(requests.length, 2);
 });
 
+test("both Gemini 3.8 models send verbatim speech, structured style, and the saved catalog voice", async (t) => {
+  const wav = new wavefile.WaveFile();
+  wav.fromScratch(1, 24_000, "16", [0, 12, -12, 0]);
+  const bytes = Buffer.from(wav.toBuffer());
+  const fetch = t.mock.method(globalThis, "fetch", async () => audioResponse({
+    mime_type: "audio/wav", data: bytes.toString("base64"),
+  }));
+  const models = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"];
+  for (const [index, model] of models.entries()) {
+    const prompt = index === 0 ? "Be friendly." : undefined;
+    const result = await provider({ model, voice: "voice_sample123" }).synthesize({
+      message: " Please listen. ",
+      speech: prompt ? { prompt } : {},
+    });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.deepEqual(result.audio.bytes, bytes);
+    const [url, init] = fetch.mock.calls[index].arguments;
+    const body = await new Request(url, init).json();
+    assert.equal(body.model, model);
+    assert.deepEqual(body.input, [{ type: "user_input", content: [{
+      type: "text", text: "Please listen.",
+      ...(prompt ? { annotations: [{ type: "speech_metadata", style: prompt }] } : {}),
+    }] }]);
+    assert.deepEqual(body.generation_config.speech_config, [{ voice: "voice_sample123" }]);
+    assert.deepEqual(body.response_format, { type: "audio" });
+    assert.equal(body.stream, false);
+    assert.equal(body.store, false);
+  }
+  assert.equal(fetch.mock.callCount(), 2);
+  bytes.writeUInt16LE(8, 34);
+  const invalid = await provider({ model: models[0] }).synthesize({ message: "Please listen." });
+  assert.equal(invalid.ok, false);
+  assert.match(invalid.reason, /invalid or unsupported speech audio/);
+});
+
 test("disabled, missing-key, invalid-message, and cancelled requests never contact Gemini", async (t) => {
   t.mock.method(globalThis, "fetch", async () => {
     throw new Error("Unexpected network");
@@ -535,6 +571,7 @@ test("timeout and user cancellation abort response body consumption without retr
 test("notify routes only to Gemini, ignores legacy tone, and deletes the temporary WAV", async (t) => {
   let requests = 0;
   let path;
+  const played = [];
   const current = settings({ style: { tone: "User tone." } });
   const before = structuredClone(current);
   t.mock.method(globalThis, "fetch", async (url, init) => {
@@ -563,6 +600,8 @@ test("notify routes only to Gemini, ignores legacy tone, and deletes the tempora
         supports: () => true,
         check: async () => ({ available: true }),
         play: async (request) => {
+          played.push(request.format);
+          if (request.format === "mp3") return { ok: true };
           assert.equal(request.format, "wav");
           path = request.path;
           wavChunks(await readFile(path));
@@ -573,6 +612,7 @@ test("notify routes only to Gemini, ignores legacy tone, and deletes the tempora
   );
   assert.equal(requests, 1);
   assert.equal(result.delivery.mode, "speech");
+  assert.deepEqual(played, ["mp3", "wav"]);
   assert.deepEqual(current, before);
   await assert.rejects(access(path));
 });

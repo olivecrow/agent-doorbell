@@ -19,6 +19,7 @@ export async function playBufferedSpeech(
   player: AudioPlayer,
   signal?: AbortSignal,
   volume?: number,
+  beforePlayback?: () => Promise<PlaybackResult>,
 ): Promise<BufferedPlaybackResult> {
   if (!player.supports(audio.format)) {
     return {
@@ -55,7 +56,9 @@ export async function playBufferedSpeech(
     });
     signal?.throwIfAborted();
 
-    result = await player.play(
+    const prelude = await beforePlayback?.();
+    signal?.throwIfAborted();
+    result = prelude?.ok === false ? prelude : await player.play(
       {
         path,
         format: audio.format,

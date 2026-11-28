@@ -2,6 +2,8 @@
 
 For a confirmed missing provider key, `notify` plays `assets/notification-no-key.mp3` as one queued file. The second piano chime starts 0.80 seconds after the first, over its fading notes. The supplied Google AI Studio clip begins at 4.32 seconds, after the second chime finishes. The complete sequence lasts 9.96 seconds. It uses normal sound playback gain and cancellation. Direct `ring` and other fallback conditions play `assets/notification.mp3`.
 
+Spoken notifications and Gemini voice previews begin with the single C and E piano recording in `assets/notification.mp3`. Its duration is about 3.5 seconds. Buffered audio is written to its private WAV file before the cue starts. Streaming waits for the first validated PCM chunk, holds it during the cue, and continues pulling PCM after the cue finishes. One queue lease covers the cue and the voice, and only the voice receives the configured speech gain. If the cue completed and subsequent notification speech playback fails, the cue counts as sound delivery and plays once. Cancelling the sequence cancels playback and closes any open stream.
+
 createAudioPlayer returns FfplayAudioPlayer on Windows, macOS, and Linux. Unsupported platform names throw. Both ring and notify use this factory.
 
 On Windows x64, npm postinstall prepares ffplay 8.1.1 under the installed package's player/bin directory. The pinned download manifest, installer, and license boundaries are documented in [managed ffplay](../player/README.md). The runtime never downloads software. Other platforms, or installations without managed files, use an existing ffplay on PATH.

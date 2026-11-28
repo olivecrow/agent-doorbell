@@ -19,7 +19,7 @@ AttentionRequest contains message, source?, and speech?. Message length is 1–1
 ## Defaults and Configuration
 
 - OpenAI is the default provider, using gpt-4o-mini-tts with default voice nova and 13 presets.
-- Gemini uses gemini-3.1-flash-tts-preview with default voice Kore and 30 presets. Each provider retains its own model/voice profile when switching; lists preserve official order independently of defaults.
+- Gemini supports the 3.8 Flash, 3.8 Flash-Lite, and 3.1 Flash Preview TTS models. The live catalog picker saves a model and voice and can play Google-provided samples for stored designed voices. The default Gemini profile uses the 3.1 preview and Kore. Each provider retains its model and voice when switching.
 - Speaking style is authored by the agent on each call from its current personality. No saved tone or personality setup exists; legacy tones are ignored and stripped on the next settings save.
 - A request can override voice for one call. Otherwise the saved voice applies. Omitted directions cause no custom personality instruction. Provider, model, activation, and playback mode remain user settings.
 - Agent instructions are delivered by doorbell agent-instructions; the CLI does not inspect private agent configuration.
@@ -29,7 +29,7 @@ AttentionRequest contains message, source?, and speech?. Message length is 1–1
 
 ## Delivery and Platform Constraints
 
-The default mode is buffered WAV: receive all bytes, create a unique temporary file, await playback, and clean up in finally. OpenAI returns WAV; Gemini PCM is validated and wrapped as WAV by wavefile. The packaged offline sound is MP3. OpenAI additionally supports incremental PCM streaming. Unsupported player capabilities and unvalidated Gemini streaming select buffered with a warning before synthesis.
+The default mode is buffered WAV. Doorbell creates a unique temporary file, plays the packaged piano cue and then the speech, and cleans up the file in finally. OpenAI and Gemini 3.8 return WAV. Gemini 3.1 PCM is validated and wrapped as WAV by wavefile. OpenAI also supports incremental PCM streaming, with the cue after the first chunk arrives and before the speech plays. Unsupported player capabilities and unvalidated Gemini streaming select buffered with a warning before synthesis.
 
 The current player is ffplay on Windows, macOS, and Linux, invoked through ProcessRunner with shell disabled. Only Windows has real playback evidence. WAV/MP3 decoding and device output remain the player's responsibility.
 

@@ -4,6 +4,7 @@ The runtime, automatic Windows player installation, direct Codex/Claude MCP setu
 
 ## Deferred Verification
 
+- [ ] Hear a stored Gemini designed-voice preview and the piano cue followed by speech through the native player. Verify 3.8 Flash buffered synthesis on a real account.
 - [ ] Validate macOS/Linux credentials, playback, human listening, and native queue/speech-directory ownership and permission rejection. Factory selection and mocked ownership checks do not establish support.
 - [ ] Re-evaluate Gemini continuous streaming when the provider/model can supply audio fast enough in the target environment. Keep it disabled until new provider-throughput and human listening evidence is available.
 - [ ] Verify actual Claude host-hook invocation. Native payload and CLI adapter behavior have automated coverage; Claude MCP connection verification does not exercise its lifecycle hook.

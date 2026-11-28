@@ -7,7 +7,7 @@ Doorbell runs on the user's audio-capable computer. Install its npm runtime once
 Requires Node.js 24+ and an installed Codex or Claude Code CLI. Windows x64 automatically downloads and verifies ffplay 8.1.1 during npm installation (about 109 MB downloaded, 103 MB installed). Other operating systems/architectures need ffplay in an absolute PATH directory and remain unverified. If lifecycle scripts were disabled, run `npm run setup:player` in the installed package directory. See [managed player](../player/README.md).
 
 ```sh
-npm install --global agent-doorbell@1.1.2
+npm install --global agent-doorbell@1.1.3
 doorbell --version
 doorbell doctor
 doorbell setup codex
@@ -16,10 +16,10 @@ doorbell setup codex
 
 Restart/reconnect the selected host. Ask its agent to call get_instructions, then notify with an explicitly requested short test message. The offline sound needs no key. Setup does not play audio, enable speech, register completion hooks, or schedule delayed notifications.
 
-The [GitHub release](https://github.com/olivecrow/agent-doorbell/releases/tag/v1.1.2) supplies the npm archive and SHA256SUMS.txt as a secondary channel:
+The [GitHub release](https://github.com/olivecrow/agent-doorbell/releases/tag/v1.1.3) supplies the npm archive and SHA256SUMS.txt as a secondary channel:
 
 ```sh
-npm install --global https://github.com/olivecrow/agent-doorbell/releases/download/v1.1.2/agent-doorbell-1.1.2.tgz
+npm install --global https://github.com/olivecrow/agent-doorbell/releases/download/v1.1.3/agent-doorbell-1.1.3.tgz
 ```
 
 Use an explicit version for reproducibility. Install once at a stable path rather than start an unpinned npx download during notification delivery.
@@ -50,7 +50,7 @@ A dedicated runtime avoids relying on global npm PATH and matches the optional C
 
 ```powershell
 $runtimeRoot = Join-Path ($env:USERPROFILE) '.agent-doorbell/runtime'
-npm install --prefix $runtimeRoot --save-exact agent-doorbell@1.1.2
+npm install --prefix $runtimeRoot --save-exact agent-doorbell@1.1.3
 $nodeExe = (Get-Command node -CommandType Application).Source
 $packageRoot = Join-Path $runtimeRoot 'node_modules/agent-doorbell'
 $cliPath = Join-Path $packageRoot 'dist/cli.js'

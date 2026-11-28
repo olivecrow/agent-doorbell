@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 import { mkdtemp, rm, readFile, writeFile, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const exec = promisify(execFile);
 const cli = fileURLToPath(new URL("../dist/cli.js", import.meta.url));
@@ -211,6 +211,64 @@ test("CLI lists provider voices without writes and preserves each voice when swi
   assert.match(key.stderr, /interactive terminal/i);
 });
 
+test("Gemini CLI lists live choices, plays a downloaded preview, and saves the chosen pair", async (t) => {
+  const dir = await environment(t);
+  const preload = join(dir, "catalog-preload.mjs");
+  const model = "gemini-3.8-flash-lite-tts";
+  const voice = "voice_test42";
+  const credentialModule = new URL("../dist/config/keyring-credential-store.js", import.meta.url).href;
+  const playerModule = new URL("../dist/audio/ffplay-player.js", import.meta.url).href;
+  await writeFile(preload, `
+    import assert from 'node:assert/strict';
+    import { readFile, writeFile } from 'node:fs/promises';
+    import { basename, join } from 'node:path';
+    import { KeyringCredentialStore } from ${JSON.stringify(credentialModule)};
+    import { FfplayAudioPlayer } from ${JSON.stringify(playerModule)};
+    const voice = ${JSON.stringify(voice)};
+    const model = ${JSON.stringify(model)};
+    const sample = Buffer.from('524946462600000057415645666d74201000000001000100c05d000080bb00000200100064617461020000000000', 'hex');
+    KeyringCredentialStore.prototype.read = async () => ({ ok: true, value: 'fake-catalog-key' });
+    globalThis.fetch = async (url, init) => {
+      assert.equal(new Headers(init.headers).get('x-goog-api-key'), 'fake-catalog-key');
+      const path = new URL(url).pathname;
+      if (path === '/v1beta/models') return Response.json({ models: [{ name: 'models/' + model }] });
+      const entry = { id: voice, type: 'prompted', display_name: 'My voice' };
+      if (path === '/v1beta/voices') return Response.json({ voices: [entry] });
+      assert.equal(path, '/v1beta/voices/' + voice);
+      return Response.json({ ...entry, sample_audio: { mime_type: 'audio/wav', data: sample.toString('base64') } });
+    };
+    let chimePlayed = false;
+    FfplayAudioPlayer.prototype.play = async ({ path, format }) => {
+      if (format === 'mp3') {
+        assert.equal(basename(path), 'notification.mp3');
+        chimePlayed = true;
+        return { ok: true };
+      }
+      assert.equal(format, 'wav');
+      assert.equal(chimePlayed, true);
+      assert.deepEqual(await readFile(path), sample);
+      await writeFile(join(process.env.DOORBELL_CONFIG_DIR, 'played-path.txt'), path);
+      return { ok: true };
+    };
+  `);
+  const browse = (args) => run(dir, ["configure", "gemini", ...args], pathToFileURL(preload).href);
+  const [models, voices] = await Promise.all([browse(["--list-models"]), browse(["--list-voices"])]);
+  assert.equal(models.code, 0, models.stderr);
+  assert.deepEqual(JSON.parse(models.stdout).map(({ id }) => id), [model]);
+  assert.equal(voices.code, 0, voices.stderr);
+  assert.deepEqual(JSON.parse(voices.stdout), [{ id: voice, type: "prompted", name: "My voice", canPreview: true }]);
+  const settingsPath = join(dir, "speech.json");
+  const preview = await browse(["--preview-voice", voice]);
+  assert.equal(preview.code, 0, preview.stderr);
+  await assert.rejects(access(await readFile(join(dir, "played-path.txt"), "utf8")), { code: "ENOENT" });
+  await assert.rejects(access(settingsPath), { code: "ENOENT" });
+  const saved = await browse(["--model", model, "--voice", voice]);
+  assert.equal(saved.code, 0, saved.stderr);
+  const settings = JSON.parse(await readFile(settingsPath, "utf8"));
+  assert.deepEqual(settings.providers.gemini, { model, voice });
+  assert.equal(settings.enabled, false);
+});
+
 test("real CLI routes per-call controls to each SDK, ignores old tones, and never writes settings", async (t) => {
   const dir = await environment(t);
   const preload = new URL("./fixtures/provider-routing.mjs", import.meta.url)
@@ -252,7 +310,7 @@ test("real CLI routes per-call controls to each SDK, ignores old tones, and neve
     const trace = JSON.parse(result.stdout);
     assert.deepEqual(trace.credentials, [provider]);
     assert.deepEqual(trace.requests, [provider]);
-    assert.deepEqual(trace.played, ["speech.wav"]);
+    assert.deepEqual(trace.played, ["notification.mp3", "speech.wav"]);
     const body = trace.bodies[0];
     assert.doesNotMatch(JSON.stringify(body), /Stale personality/);
     if (provider === "openai") {
@@ -404,7 +462,7 @@ test("Codex argument and Claude stdin hooks share validation, fallback, and prov
       assert.equal(result.code, 0, result.stderr);
       const trace = JSON.parse(result.stdout);
       const sound = mode === "missing" ? "notification-no-key.mp3" : "notification.mp3";
-      assert.deepEqual(trace.played, [mode === "speech" ? "speech.wav" : sound]);
+      assert.deepEqual(trace.played, mode === "speech" ? ["notification.mp3", "speech.wav"] : [sound]);
       assert.equal(
         trace.requests.length,
         ["failure", "speech"].includes(mode) ? 1 : 0,

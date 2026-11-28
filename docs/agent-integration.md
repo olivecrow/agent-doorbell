@@ -54,17 +54,17 @@ Example argument array, only when OpenAI is selected:
 ]
 ```
 
-## Gemini: gemini-3.1-flash-tts-preview
+## Gemini TTS
 
 Read the [official TTS manual](https://ai.google.dev/gemini-api/docs/speech-generation), especially its [prompting guide](https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide), [audio tags](https://ai.google.dev/gemini-api/docs/speech-generation#audio-tags), and [voice options](https://ai.google.dev/gemini-api/docs/speech-generation#voice-options).
 
 | Notify option  | API mapping                                                 | Default when omitted               |
 | -------------- | ----------------------------------------------------------- | ---------------------------------- |
-| --message TEXT | Final Transcript section of input                           | Required                           |
-| --prompt TEXT  | Delivery directions inserted before the Transcript in input | No custom delivery prompt          |
+| --message TEXT | Verbatim text in 3.8, final Transcript in 3.1 Preview | Required |
+| --prompt TEXT  | Style metadata in 3.8, directions before the Transcript in 3.1 Preview | No custom delivery prompt |
 | --voice NAME   | generation_config.speech_config[0].voice                    | Saved Gemini voice, otherwise Kore |
 
-Describe the desired delivery in prompt, from one sentence to structured character and performance notes. Doorbell adds a fixed synthesis instruction and appends `Transcript:` followed by message; do not repeat the transcript in prompt. Gemini's natural-language prompt controls pace. OpenAI's --instructions and numeric --speed are rejected for Gemini.
+Describe the desired delivery in `--prompt`, from one sentence to structured character and performance notes. Put the words to speak in `--message`. Gemini's natural-language prompt controls pace. OpenAI's --instructions and numeric --speed are rejected for Gemini.
 
 For local expression changes, Gemini audio tags may be included directly in message. They count toward its 120-code-unit limit and are forwarded unchanged. Their acoustic interpretation is model-dependent. Doorbell makes a single-speaker request.
 
@@ -74,7 +74,7 @@ Example argument array, only when Gemini is selected:
 [
   "notify",
   "--message",
-  "[warmly] The preview is ready. Please take a look.",
+  "The preview is ready. Please take a look.",
   "--prompt",
   "Character: A thoughtful colleague with quiet humor.\nDelivery: Relaxed pace, a brief pause after ready, and an inviting finish.",
   "--voice",
@@ -84,13 +84,13 @@ Example argument array, only when Gemini is selected:
 
 ## Settings and Outcomes
 
-`doorbell configure speech --show` reads effective preferences. `doorbell configure speech --list-voices` lists the active provider's voices; adding `--provider openai` or `--provider gemini` only selects the catalog to read. Refresh configuration discovery if the user changes providers.
+`doorbell configure speech --show` reads effective preferences. `doorbell configure speech --list-voices` lists the presets accepted by `notify --voice` for the active provider. Adding `--provider openai` or `--provider gemini` selects the preset list to read. Omit `--voice` to use a saved Gemini catalog voice. Refresh configuration discovery if the user changes providers or models.
 
 Saved settings own provider, model, activation, playback mode, local speech playback volume, and a default voice for each provider. Notify can override voice for one call. It cannot change provider, model, playback volume, credentials, or activation. Do not run configuration commands unless the user requested a settings change. Local gain can be changed with `configure speech --volume 1.5` (0.25-4; default 1); it applies to speech from either provider, with peak limiting, and does not change the packaged sound or system volume. Old saved style.tone values are ignored; the next explicit settings save removes that field. The old configure --tone/--reset-tone and notify --agent-tone options are no longer accepted.
 
 Invalid or mismatched delivery controls return exit 2 before credentials, synthesis, or audio playback. They do not silently become a successful sound notification. Correct the options using this guide. Valid notifications with disabled speech or unavailable credentials use the packaged sound. Provider failures never trigger another cloud provider or an automatic paid retry.
 
-Exit 0 means audio delivery succeeded, possibly only the fallback sound; it does not prove speech or human listening. Failed speech is reported on stderr even if sound fallback succeeds. Exit 1 means configuration or delivery failed. SIGINT uses 130 and SIGTERM uses 143; cancellation stops fallback. Do not repeat a paid synthesis merely to alter its delivery after it has started or succeeded.
+Spoken notifications start with the packaged piano cue immediately before the voice. Exit 0 means audio delivery succeeded. Check the delivery mode or CLI warnings to distinguish speech from sound-only delivery, including when the cue played and voice playback failed. Exit 1 means configuration or delivery failed. SIGINT uses 130 and SIGTERM uses 143; cancellation stops the sequence. Do not repeat a paid synthesis merely to alter its delivery after it has started or succeeded.
 
 ## MCP and Hooks
 

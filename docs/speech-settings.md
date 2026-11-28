@@ -8,12 +8,12 @@ parseSpeechSettings(input: unknown) validates non-secret settings, applies defau
 | provider               | openai or gemini             | openai                       |
 | providers.openai.model | gpt-4o-mini-tts              | gpt-4o-mini-tts              |
 | providers.openai.voice | One of the 13 OpenAI presets | nova                         |
-| providers.gemini.model | gemini-3.1-flash-tts-preview | gemini-3.1-flash-tts-preview |
-| providers.gemini.voice | One of the 30 Gemini presets | Kore                         |
+| providers.gemini.model | gemini-3.1-flash-tts-preview, gemini-3.8-flash-tts, or gemini-3.8-flash-lite-tts | gemini-3.1-flash-tts-preview |
+| providers.gemini.voice | Case-sensitive preset for 3.1, or a catalog voice ID for 3.8 | Kore |
 | playbackMode           | buffered or streaming        | buffered                     |
 | playbackVolume         | Finite number from 0.25 to 4 | 1 (original level)           |
 
-Missing fields use defaults. null, invalid types, unsupported values, and unknown fields are rejected with static errors. API keys, message, source, and per-call speech controls cannot be saved in this object. Voice names are case-sensitive and validated against their own provider, including inactive profiles.
+Missing fields use defaults. Null, invalid types, unsupported values, and unknown fields are rejected with static errors. API keys, message, source, and per-call speech controls cannot be saved in this object. Voice names are case-sensitive. Settings validation checks 3.8 voice ID syntax offline. The online picker validates availability with Gemini before saving.
 
 Existing flat OpenAI settings with root model/voice and no provider remain valid, including explicit alloy. A legacy style object with an optional string tone is accepted for migration but discarded in the parsed result; it never affects synthesis. Loading never rewrites a file. Saving writes the canonical providers object with both profiles and preserves activation, mode, and explicit voice choices. It omits the legacy style field. Flat model/voice are also accepted for an explicitly selected provider, but cannot be mixed with providers. This prevents ambiguous voice ownership.
 
@@ -41,6 +41,8 @@ Agent requests cannot override provider, model, activation, credentials, playbac
 ## Separate Commands
 
 configure api-key [--provider openai|gemini] only accesses that provider's OS credentials; its default is always OpenAI. configure speech only accesses speech.json. Neither command requires the other store to be available.
+
+`configure gemini` is the account-backed model and voice picker. It uses the Gemini key for catalog reads and applies a confirmed selection through the same atomic settings writer. See [Gemini TTS](gemini-tts.md).
 
 configure speech --enable enables speech with default preferences on a fresh setup. --provider selects the synthesis provider; --voice updates that provider's voice. --playback-mode buffered|streaming changes the preferred mode. Unsupported streaming is reported and replaced with buffered before a request; Gemini currently follows that path. --provider, --voice, and --playback-mode leave activation unchanged. --show reads effective settings without creating a file. --list-voices lists the active provider's catalog, or the explicit --provider catalog without changing selection. Removing a key preserves speech settings; notify subsequently falls back to sound until that provider has a usable key.
 

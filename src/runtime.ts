@@ -14,6 +14,7 @@ import {
 import { createSpeechProvider } from "./speech/create-provider.js";
 import { normalizeSpeechOptions } from "./speech/options.js";
 import { cleanupStaleSpeechFiles } from "./speech/temp-speech-files.js";
+import { playBufferedSpeech } from "./speech/play-buffered-speech.js";
 
 /** CLI, hooks, and MCP share one production composition and one user-wide queue. */
 export async function deliverNotification(
@@ -67,6 +68,23 @@ export async function deliverNotification(
 export function playNotificationSound(signal?: AbortSignal) {
   return withDeliveryQueue(
     () => ring(createAudioPlayer(), signal),
+    undefined,
+    signal,
+  );
+}
+
+export function playGeminiVoicePreview(bytes: Uint8Array, signal: AbortSignal) {
+  return withDeliveryQueue(
+    () => {
+      const player = createAudioPlayer();
+      return playBufferedSpeech(
+        { mode: "buffered", format: "wav", bytes },
+        player,
+        signal,
+        undefined,
+        () => ring(player, signal),
+      );
+    },
     undefined,
     signal,
   );

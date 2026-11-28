@@ -1,19 +1,26 @@
 # Gemini TTS
 
-GeminiSpeechProvider implements buffered speech using the official @google/genai SDK. The selected model is `gemini-3.1-flash-tts-preview`; it is a preview model. The default voice is Kore. Model identity follows Google's [model reference](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-tts-preview).
+GeminiSpeechProvider implements buffered speech for `gemini-3.8-flash-tts`, `gemini-3.8-flash-lite-tts`, and `gemini-3.1-flash-tts-preview` using the official `@google/genai` SDK. The legacy settings defaults are `gemini-3.1-flash-tts-preview` and Kore. Google's [deprecation schedule](https://aistudio.google.com/docs/deprecations#gemini-3-preview-models) lists a shutdown date for the 3.1 preview. Choose a 3.8 model to keep using Gemini after shutdown.
 
 ## Configuration
 
 ```sh
 doorbell configure api-key --provider gemini
-doorbell configure speech --provider gemini --enable
-doorbell configure speech --list-voices --provider gemini
-doorbell configure speech --voice Puck
+doorbell configure gemini
+doorbell configure speech --enable
+doorbell configure gemini --list-models
+doorbell configure gemini --list-voices
+doorbell configure gemini --model gemini-3.8-flash-lite-tts --voice Kore
+doorbell configure gemini --preview-voice voice_abc123
 ```
 
-The key is entered through hidden input and stored in the gemini-api-key OS credential account. It does not enable or select speech. The speech command selects Gemini and explicitly enables synthesis; omitted preferences use defaults. Provider switching preserves each voice. Use `npm run dev --` in place of `doorbell` for the isolated development configuration.
+The key is entered through hidden input and stored in the `gemini-api-key` OS credential account. `configure gemini` reads the stored key and loads both catalogs concurrently. Select a model, search the compatible voices by name, ID, or language, and confirm to save the selection and make Gemini the active provider. Supplying the model and voice IDs together validates them against the same live catalogs and saves without a prompt. Both forms preserve activation, playback preferences, and the OpenAI profile. `configure speech --enable` explicitly activates the selected provider. Use `npm run dev --` in place of `doorbell` for the isolated development configuration.
 
-The 30 case-sensitive voices are stored in the [official speech guide](https://ai.google.dev/gemini-api/docs/speech-generation) order:
+Read-only listing prints JSON. The [Models API](https://aistudio.google.com/api-reference/models/list-models) results are limited to models the adapter implements. The [Voices API](https://aistudio.google.com/api-reference/voices) exposes prebuilt and project-owned voices. The 3.1 preview can select the original 30 prebuilt voices when returned by the API. The 3.8 models can select voices from the extended catalog and stored custom voice IDs. The catalog adapter follows pagination with bounded responses and a 15-second deadline per operation. It sends the key in an HTTPS header to the Gemini API and rejects redirects.
+
+The voice list marks stored designed voices with `canPreview`. ListVoices returns metadata. Selecting **Play preview**, or passing `--preview-voice` with the stored voice ID, reads `sample_audio` from [GetVoice](https://aistudio.google.com/api-reference/voices/get-voice) and plays the piano cue followed by the sample WAV under the same queue lease. Prebuilt and replicated voices lack a downloadable sample in this API. Google AI Studio offers [prebuilt voice auditions](https://aistudio.google.com/generate-speech). Local previews use the existing private WAV file lifecycle and do not call speech synthesis.
+
+`doorbell configure speech --list-voices --provider gemini` remains the offline list of the 30 case-sensitive presets available for `notify --voice`, in the [official speech guide](https://ai.google.dev/gemini-api/docs/speech-generation) order.
 
 ```text
 Zephyr, Puck, Charon, Kore, Fenrir, Leda, Orus, Aoede, Callirrhoe,
@@ -25,15 +32,15 @@ Sadaltager, Sulafat
 
 ## Request and Audio
 
-The adapter calls Interactions at `https://generativelanguage.googleapis.com/v1beta/interactions`, with an explicit API key and Vertex/enterprise modes disabled. It sends the selected model, `generation_config.speech_config: [{ voice }]`, `response_format: { type: "audio" }`, `store: false`, and `stream: false`. Use the model's default audio output, matching the official speech example: this model rejects explicit audio/l16 output selection even though it returns PCM with that MIME type. `store: false` disables interaction storage/history; it is not a claim about all service-side data retention.
+The adapter calls Interactions at `https://generativelanguage.googleapis.com/v1beta/interactions`, with an explicit API key and Vertex and enterprise modes disabled. It sends the selected model, `generation_config.speech_config: [{ voice }]`, `response_format: { type: "audio" }`, `store: false`, and `stream: false`. Each model uses its default output format. `store: false` disables interaction storage and history.
 
 When `GOOGLE_GENAI_DEBUG` is nonempty, Doorbell uses the bundled sound and reports why. With debug logging off, only the final transport attaches the stored Gemini key to the official Interactions POST.
 
-The input contains a fixed synthesis instruction, optional request speech.prompt, and the final Transcript from message. Prompt is a per-call delivery direction prefix, not a second transcript. Its multiline text is preserved after outer whitespace trimming. No custom directions are inserted when omitted; legacy saved tones are ignored. Request speech.voice overrides the saved default for this synthesis only. Audio tags in message are forwarded unchanged. OpenAI instructions/speed are rejected before credential access. [Agent integration](agent-integration.md) links the official prompting and audio-tag manuals for calling agents. Source identifiers, conversation history, and agent configuration are excluded; there is no separate text-generation call.
+With 3.8, `message` is the verbatim text and the optional `speech.prompt` goes in `speech_metadata.style`. The 3.1 preview uses a fixed synthesis instruction, optional prompt, and final Transcript section. Both preserve multiline style directions after outer whitespace trimming and forward audio tags in the message unchanged. `speech.voice` accepts one of the 30 presets as a per-call override. Omit it to use the saved voice, including a catalog voice selected with `configure gemini`. See [agent integration](agent-integration.md) for prompting guides and per-call options.
 
-A completed interaction must contain inline audio. Accept only mono 24 kHz, signed 16-bit little-endian PCM, with consistent optional MIME parameters/metadata. Require canonical nonempty base64, whole samples, and at most 60 seconds of PCM (2,880,000 bytes). This is a decoded-audio guard; the SDK buffers the JSON response before validation.
+A completed interaction must contain inline 24 kHz mono signed 16-bit little-endian PCM audio. The 3.8 models return WAV, which the adapter validates and passes to the player. The 3.1 preview returns raw `audio/l16`, which the adapter validates before wrapping. Both paths require canonical nonempty base64, whole samples, and at most 60 seconds of PCM (2,880,000 bytes). The SDK buffers the JSON response before decoded-audio validation.
 
-The zero-dependency wavefile package writes a WAV container around the samples. It does not play audio. The existing temporary-file and ffplay path handles decoding, output, cancellation, and cleanup. A narrow local declaration is mapped through tsconfig for the two wavefile APIs used here, because version 11's bundled declaration is incompatible with TypeScript 7. Runtime imports still resolve to the installed package, and tests verify the emitted WAV bytes.
+The wavefile package wraps raw 3.1 PCM samples in a WAV container. The temporary-file and ffplay path handles decoding, output, cancellation, and cleanup. A narrow local declaration is mapped through tsconfig for the two wavefile APIs used here because version 11's bundled declaration is incompatible with TypeScript 7.
 
 ## Failure and Evidence
 

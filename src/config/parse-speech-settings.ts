@@ -8,9 +8,9 @@ import {
 import {
   DEFAULT_GEMINI_TTS_MODEL,
   DEFAULT_GEMINI_TTS_VOICE,
-  isGeminiTtsVoice,
+  isGeminiTtsModel,
+  isGeminiVoiceForModel,
   type GeminiTtsModel,
-  type GeminiTtsVoice,
 } from "../speech/providers/gemini.js";
 import {
   DEFAULT_SPEECH_PROVIDER,
@@ -42,7 +42,7 @@ export interface SpeechSettings extends CommonSpeechSettings {
     };
     readonly gemini: {
       readonly model: GeminiTtsModel;
-      readonly voice: GeminiTtsVoice;
+      readonly voice: string;
     };
   };
 }
@@ -65,9 +65,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function parseProfile<Model extends string, Voice extends string>(
   input: unknown,
-  model: Model,
+  defaultModel: Model,
   defaultVoice: Voice,
-  isVoice: (value: string) => value is Voice,
+  isModel: (value: unknown) => value is Model,
+  isVoice: (value: string, model: Model) => value is Voice,
 ): { readonly model: Model; readonly voice: Voice } | undefined {
   const value = input === undefined ? {} : input;
   if (
@@ -76,10 +77,11 @@ function parseProfile<Model extends string, Voice extends string>(
   )
     return undefined;
   const voice = value.voice === undefined ? defaultVoice : value.voice;
+  const model = value.model === undefined ? defaultModel : value.model;
   if (
-    (value.model !== undefined && value.model !== model) ||
+    !isModel(model) ||
     typeof voice !== "string" ||
-    !isVoice(voice)
+    !isVoice(voice, model)
   )
     return undefined;
   return { model, voice };
@@ -166,13 +168,15 @@ export function parseSpeechSettings(input: unknown): SpeechSettingsResult {
     profiles.openai,
     DEFAULT_OPENAI_TTS_MODEL,
     DEFAULT_OPENAI_TTS_VOICE,
+    (model): model is OpenAiTtsModel => model === DEFAULT_OPENAI_TTS_MODEL,
     isOpenAiTtsVoice,
   );
-  const gemini = parseProfile(
+  const gemini = parseProfile<GeminiTtsModel, string>(
     profiles.gemini,
     DEFAULT_GEMINI_TTS_MODEL,
     DEFAULT_GEMINI_TTS_VOICE,
-    isGeminiTtsVoice,
+    isGeminiTtsModel,
+    (voice, model): voice is string => isGeminiVoiceForModel(model, voice),
   );
   if (!openai || !gemini)
     return {
